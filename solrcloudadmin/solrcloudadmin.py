@@ -94,7 +94,7 @@ class SolrCloudAdmin(object):
 
     def list_collections(self):
         """
-        Returns a set containing dictionaires for all the collections
+        Returns a dictionary containing dictionaires for all the collections
         in the cluster
 
         /zookeeper?detail=true&path=%2Fcollections
@@ -104,7 +104,7 @@ class SolrCloudAdmin(object):
         state_json = '%2Fstate.json'
         response = self._query(base_path)
 
-        collections_list = list()
+        collections_list = dict()
         for collection_item in response['tree'][0]['children']:
             logging.debug(collection_item['data']['title'])
             collection_data = self._query(
@@ -113,6 +113,6 @@ class SolrCloudAdmin(object):
                 collection_item['data']['title'] +
                 state_json
             )
-            collections_list.append(json.loads(collection_data['znode']['data']))
+            collections_list[collection_item['data']['title']] = json.loads(collection_data['znode']['data'])
 
         return collections_list
