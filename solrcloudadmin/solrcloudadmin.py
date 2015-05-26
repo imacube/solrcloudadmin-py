@@ -91,3 +91,28 @@ class SolrCloudAdmin(object):
             live_nodes.append(self.parse_live_node_title(node['data']['title']))
 
         return live_nodes
+
+    def list_collections(self):
+        """
+        Returns a set containing dictionaires for all the collections
+        in the cluster
+
+        /zookeeper?detail=true&path=%2Fcollections
+        /zookeeper?detail=true&path=%2Fcollections%2Faws-stage-442%2Fstate.json
+        """
+        base_path = """/zookeeper?detail=true&path=%2Fcollections"""
+        state_json = '%2Fstate.json'
+        response = self._query(base_path)
+
+        collections_list = list()
+        for collection_item in response['tree'][0]['children']:
+            logging.debug(collection_item['data']['title'])
+            collection_data = self._query(
+                base_path +
+                '%2F' +
+                collection_item['data']['title'] +
+                state_json
+            )
+            collections_list.append(json.loads(collection_data['znode']['data']))
+
+        return collections_list
