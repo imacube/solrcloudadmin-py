@@ -92,6 +92,21 @@ class SolrCloudAdmin(object):
 
         return live_nodes
 
+    def list_collections_only(self):
+        """
+        Returns a set of collections with no other data.
+
+        /zookeeper?detail=true&path=%2Fcollections
+        """
+        base_path = """/zookeeper?detail=true&path=%2Fcollections"""
+
+        response = self._query(base_path)
+        collections_list = set()
+        for collection_item in response['tree'][0]['children']:
+            collections_list.add(collection_item['data']['title'])
+
+        return collections_list
+
     def list_collections(self):
         """
         Returns a dictionary containing dictionaires for all the collections
