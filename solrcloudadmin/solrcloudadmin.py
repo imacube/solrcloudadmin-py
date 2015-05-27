@@ -92,6 +92,23 @@ class SolrCloudAdmin(object):
 
         return live_nodes
 
+    def get_collection_sate(self, collection):
+        """
+        Return the state for the requested collection.
+
+        /zookeeper?detail=true&path=%2Fcollections%2Faws-stage-442%2Fstate.json
+        """
+        base_path = """/zookeeper?detail=true&path=%2Fcollections"""
+        state_json = '%2Fstate.json'
+
+        collection_data = self._query(
+            base_path +
+            '%2F' +
+            collection +
+            state_json
+        )
+        return json.loads(collection_data['znode']['data'])
+
     def list_collections_only(self):
         """
         Returns a set of collections with no other data.
@@ -101,33 +118,28 @@ class SolrCloudAdmin(object):
         base_path = """/zookeeper?detail=true&path=%2Fcollections"""
 
         response = self._query(base_path)
+
         collections_list = set()
         for collection_item in response['tree'][0]['children']:
             collections_list.add(collection_item['data']['title'])
 
         return collections_list
 
-    def list_collections(self):
+    def list_collection_data(self, limit=0):
         """
         Returns a dictionary containing dictionaires for all the collections
-        in the cluster
-
-        /zookeeper?detail=true&path=%2Fcollections
-        /zookeeper?detail=true&path=%2Fcollections%2Faws-stage-442%2Fstate.json
+        in the cluster.
         """
-        base_path = """/zookeeper?detail=true&path=%2Fcollections"""
-        state_json = '%2Fstate.json'
-        response = self._query(base_path)
-
         collections_list = dict()
-        for collection_item in response['tree'][0]['children']:
-            logging.debug(collection_item['data']['title'])
-            collection_data = self._query(
-                base_path +
-                '%2F' +
-                collection_item['data']['title'] +
-                state_json
-            )
-            collections_list[collection_item['data']['title']] = json.loads(collection_data['znode']['data'])
+        return_count = 0
+
+        for collection_item in self.list_collections_only():
+            logging.debug(collection_item)
+            collections_list[collection_item] = self.get_collection_sate(collection_item)
+
+            if limit > 0:
+                return_count += 1
+            if limit > 0 and return_count >= limit:
+                break
 
         return collections_list
