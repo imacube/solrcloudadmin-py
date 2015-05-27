@@ -113,7 +113,9 @@ class SolrCloudAdmin(object):
             collection +
             state_json
         )
-        return json.loads(collection_data['znode']['data'])
+        data = json.loads(collection_data['znode']['data'])[collection]
+        logging.debug('\n%s', json.dumps(data, sort_keys=True, indent=4))
+        return data
 
     def list_collections_only(self):
         """
