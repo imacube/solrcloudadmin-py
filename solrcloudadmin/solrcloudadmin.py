@@ -151,3 +151,23 @@ class SolrCloudAdmin(object):
                 break
 
         return collections_list
+
+    def collection_summary(self, collection_dict):
+        """
+        Given a dictionary of collection data returns a summary dictionary
+        of the collection's cores.
+        """
+        logging.debug('collection_dict:\n%s', self.pretty_format(collection_dict))
+
+        return_dict = dict()
+        for shard in collection_dict['shards']:
+            shard_dict = dict()
+            for replica in collection_dict['shards'][shard]['replicas']:
+                core_dict = dict()
+                core_dict['core'] = collection_dict['shards'][shard]['replicas'][replica]['core']
+                core_dict['node_name'] = collection_dict['shards'][shard]['replicas'][replica]['node_name']
+                core_dict['state'] = collection_dict['shards'][shard]['replicas'][replica]['state']
+                core_dict['base_url'] = collection_dict['shards'][shard]['replicas'][replica]['base_url']
+                shard_dict[replica] = core_dict
+            return_dict[shard] = shard_dict
+        return return_dict
