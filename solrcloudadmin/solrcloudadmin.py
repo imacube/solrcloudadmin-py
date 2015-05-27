@@ -171,3 +171,20 @@ class SolrCloudAdmin(object):
                 shard_dict[replica] = core_dict
             return_dict[shard] = shard_dict
         return return_dict
+
+    def cluster_summary(self):
+        """
+        Build and return a summary of the distribution of collections.
+        """
+        node_list = dict()
+        collection_list = self.list_collection_data()
+        for collection in collection_list:
+            summary = self.collection_summary(collection_list[collection])
+            for shard in summary:
+                for core in summary[shard]:
+                    node_name = summary[shard][core]['node_name']
+                    if node_name in node_list:
+                        node_list[node_name] += 1
+                    else:
+                        node_list[node_name] = 1
+        return node_list
