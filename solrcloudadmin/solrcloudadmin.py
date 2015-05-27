@@ -72,11 +72,17 @@ class SolrCloudAdmin(object):
 
         return self.url + path
 
+    def pretty_format(self, data, sort_keys=True, indent=4):
+        """
+        Function to pretty format JSON or dictionary items.
+        """
+        return json.dumps(data, sort_keys=sort_keys, indent=indent)
+
     def pretty_print(self, data, sort_keys=True, indent=4):
         """
-        Function to pretty print json as needed
+        Function to pretty print JSON or dictionary items.
         """
-        print json.dumps(data, sort_keys=sort_keys, indent=indent)
+        print self.pretty_format(data, sort_keys, indent)
 
     def list_live_nodes(self):
         """
