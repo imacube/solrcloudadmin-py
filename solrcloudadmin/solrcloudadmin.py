@@ -64,7 +64,12 @@ class SolrCloudAdmin(object):
         logging.debug('query_url: %s', query_url)
 
         try:
-            return json.load(urllib2.urlopen(query_url))
+            request = urllib2.urlopen(query_url)
+            data = request.read()
+            json_data = json.loads(data)
+            logging.debug('request data: %s', data)
+            logging.debug('json: %s: ', json_data)
+            return json_data
         except urllib2.HTTPError as exception:
             logging.debug('Error returned when opening URL')
             code = exception.code
@@ -72,6 +77,9 @@ class SolrCloudAdmin(object):
             logging.debug('code: %d', code)
             logging.debug('reason: %s', reason)
             return reason
+        except ValueError as exception:
+            logging.critial('ValueError exception thrown when decoding JSON')
+            logging.critical('Raw data returned:\n%s', data)
 
     def _build_url(self, path):
         """
@@ -230,6 +238,7 @@ class SolrCloudAdmin(object):
         if async:
             path = '%s&async=%s' % (path, str(async))
 
+        logging.debug('path: %s', path)
         response = self._query(path)
 
         return response
