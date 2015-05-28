@@ -21,13 +21,28 @@ def find_collection(solr_cloud, source_node):
                     logging.debug('Found match: %s', solr_cloud.pretty_format(return_dict))
                     return return_dict
 
+def check_destination(solr_cloud, collection, shard, destination_node):
+    """
+    Verify that the destination node does not already have the collection.
+    """
+    data = solr_cloud.get_collection_state(collection)
+    for replica in data['shards'][shard]['replicas']:
+        if data['shards'][shard]['replicas'][replica]['node_name'] == destination_node:
+            return {
+                'status': 1,
+                'message': 'Replica already on destination node.'
+                }
+    return {
+        'status': 0
+        }
+
 def main():
     """
     Called if run from command line.
     """
     import argparse
     parser = argparse.ArgumentParser(
-        description='Moves collection replica from one node to another'
+        description='Migrates collections from one node to another.'
         )
     parser.add_argument(
         '--url', nargs=1, dest='url', required=True,
@@ -93,6 +108,7 @@ def main():
     request_id = 1000
 
     count = 0
+    logging.info('Moving: collection shard replica')
     while limit == 0 or count < limit:
         logging.debug('count: %d', count)
         logging.debug('limit: %d', limit)
@@ -101,6 +117,21 @@ def main():
 
         if data is None:
             logging.info('No more collections found to migrate')
+            break
+
+        # Check destination
+        response = check_destination(
+            solr_cloud=solr_cloud,
+            collection=data['collection'],
+            shard=data['shard'],
+            destination_node=destination_node
+            )
+        if response['status'] != 0:
+            logging.critical(
+                'Problem with destination for replica.\nResponse:\n%s\nCollection, shard, and replica information:\n%s',
+                solr_cloud.pretty_format(response),
+                solr_cloud.pretty_format(data)
+                )
             break
 
         # Move that collection
