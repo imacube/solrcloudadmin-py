@@ -172,10 +172,14 @@ class SolrCloudAdmin(object):
             shard_dict = dict()
             for replica in collection_dict['shards'][shard]['replicas']:
                 core_dict = dict()
-                core_dict['core'] = collection_dict['shards'][shard]['replicas'][replica]['core']
-                core_dict['node_name'] = collection_dict['shards'][shard]['replicas'][replica]['node_name']
-                core_dict['state'] = collection_dict['shards'][shard]['replicas'][replica]['state']
-                core_dict['base_url'] = collection_dict['shards'][shard]['replicas'][replica]['base_url']
+                core_dict['core'] = \
+                    collection_dict['shards'][shard]['replicas'][replica]['core']
+                core_dict['node_name'] = \
+                    collection_dict['shards'][shard]['replicas'][replica]['node_name']
+                core_dict['state'] = \
+                    collection_dict['shards'][shard]['replicas'][replica]['state']
+                core_dict['base_url'] = \
+                    collection_dict['shards'][shard]['replicas'][replica]['base_url']
                 shard_dict[replica] = core_dict
             return_dict[shard] = shard_dict
         return return_dict
@@ -223,7 +227,7 @@ class SolrCloudAdmin(object):
         if node:
             path = '%s&node=%s' % (path, node)
         if async:
-            path = '%s&async=&s' % (path, str(async))
+            path = '%s&async=%s' % (path, str(async))
 
         response = self._query(path)
 
@@ -279,14 +283,22 @@ class SolrCloudAdmin(object):
         response = self.add_replica(collection=collection, shard=shard, node=destination_node)
         if response['responseHeader']['status'] != 0:
             logging.critical(self.pretty_format(response))
-            return {'status': 'failure', 'message': 'Status code not 0 for add_replica, see response key.', 'response': response}
+            return {
+                'status': 'failure',
+                'message': 'Status code not 0 for add_replica, see response key.',
+                'response': response
+                }
         logging.debug(self.pretty_format(response))
 
         # Delete old replica
         response = self.delete_replica(collection=collection, shard=shard, replica=replica)
         if response['responseHeader']['status'] != 0:
             self.pretty_print(response)
-            return {'status': 'failure', 'message': 'Status code not 0 for delete_replica, see response key.', 'response': response}
+            return {
+                'status': 'failure',
+                'message': 'Status code not 0 for delete_replica, see response key.',
+                'response': response
+                }
         logging.debug(self.pretty_format(response))
 
         return {'status': 'success'}
