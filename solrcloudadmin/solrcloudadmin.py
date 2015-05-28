@@ -73,13 +73,14 @@ class SolrCloudAdmin(object):
         except urllib2.HTTPError as exception:
             logging.debug('Error returned when opening URL')
             code = exception.code
-            reason = json.loads(exception.read())
-            logging.debug('code: %d', code)
-            logging.debug('reason: %s', reason)
-            return reason
+            reason = exception.read()
+            logging.critical('code: %d', code)
+            logging.critical('reason: %s', reason)
+            return None
         except ValueError as exception:
             logging.critial('ValueError exception thrown when decoding JSON')
             logging.critical('Raw data returned:\n%s', data)
+            return None
 
     def _build_url(self, path):
         """
