@@ -50,12 +50,12 @@ def main():
         help="""The hostname or IP of the SolrCloud cluster, e.g. solrcloud:8983/solr"""
         )
     parser.add_argument(
-        '-s', nargs=1, dest='source', required=True,
+        '-s', nargs=1, dest='source_node', required=True,
         type=str,
         help="""The source host as SolrCloud formated node_name."""
         )
     parser.add_argument(
-        '-d', nargs=1, dest='destination', required=False,
+        '-d', nargs=1, dest='destination_node', required=False,
         type=str,
         help="""The destination host as SolrCloud formated node_name."""
         )
@@ -87,12 +87,12 @@ def main():
         logging.basicConfig(level=logging.INFO)
         solr_cloud = SolrCloudAdmin(url=args.url[0], loglevel=logging.INFO)
 
-    source_node = args.source[0]
+    source_node = args.source_node[0]
     destination_node = None
     limit = 0
 
     if 'destination_node' in vars(args):
-        destination_node = args.destination[0]
+        destination_node = args.destination_node[0]
         logging.debug('destination_node: %s', destination_node)
     if 'limit' in vars(args):
         limit = args.limit[0]
