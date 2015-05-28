@@ -106,7 +106,7 @@ class SolrCloudAdmin(object):
 
         return live_nodes
 
-    def get_collection_sate(self, collection):
+    def get_collection_state(self, collection):
         """
         Return the state for the requested collection.
 
@@ -151,7 +151,7 @@ class SolrCloudAdmin(object):
 
         for collection_item in self.list_collections_only():
             logging.debug(collection_item)
-            collections_list[collection_item] = self.get_collection_sate(collection_item)
+            collections_list[collection_item] = self.get_collection_state(collection_item)
 
             if limit > 0:
                 return_count += 1
@@ -270,7 +270,7 @@ class SolrCloudAdmin(object):
         replica = None
 
         # Get replica to be deleted
-        data = self.get_collection_sate(collection=collection)
+        data = self.get_collection_state(collection=collection)
         for rep in data['shards'][shard]['replicas']:
             if data['shards'][shard]['replicas'][rep]['node_name'] == source_node:
                 replica = rep
