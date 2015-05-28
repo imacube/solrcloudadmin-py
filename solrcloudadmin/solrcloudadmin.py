@@ -196,3 +196,97 @@ class SolrCloudAdmin(object):
                     else:
                         node_list[node_name] = 1
         return node_list
+
+    def get_core_status(self, core=None):
+        """
+        Get information for the requested core.
+        /admin/cores?action=STATUS&wt=json&core=<core to lookup>
+        """
+        base_path = """/admin/cores?action=STATUS&wt=json"""
+
+        if core:
+            response = self._query('%s&core=%s' % (base_path, core))
+        else:
+            response = self._query('%s' % (base_path))
+        return response
+
+    def add_replica(self, collection, shard, node=None, async=None):
+        """
+        Add a replica of a collections shard.
+
+        /admin/collections?action=ADDREPLICA&collection=<collection>\
+        &shard=<shard>&node=<optional: solr node name>&async=<optioanl: async request id>
+        """
+        base_path = """/admin/collections?action=ADDREPLICA&wt=json"""
+        path = '%s&collection=%s' % (base_path, collection)
+        path = '%s&shard=%s' % (path, shard)
+        if node:
+            path = '%s&node=%s' % (path, node)
+        if async:
+            path = '%s&async=&s' % (path, str(async))
+
+        response = self._query(path)
+
+        return response
+
+    def delete_replica(self, collection, shard, replica, only_if_down=None):
+        """
+        Delete a replica of a collections shard.
+
+        /admin/collections?action=DELETEREPLICA\
+        &collection=collection&shard=shard&replica=replica
+        """
+        base_path = """/admin/collections?action=DELETEREPLICA&wt=json"""
+        path = '%s&collection=%s' % (base_path, collection)
+        path = '%s&shard=%s' % (path, shard)
+        path = '%s&replica=%s' % (path, replica)
+        if only_if_down:
+            path = '%s&onlyIfDown=%s' % (path, only_if_down)
+
+        response = self._query(path)
+
+        return response
+
+    def check_request_status(self, requestid):
+        """
+        Check request status and return the result.
+        """
+        base_path = """/admin/collections?action=REQUESTSTATUS&wt=json&requestid="""
+
+        response = self._query('%s%d' % (base_path, requestid))
+        if response['responseHeader']['status'] == 0:
+            return response['status']
+        else:
+            return response
+
+    def move_replica(self, collection, shard, source_node, destination_node):
+        """
+        Move a replica from one node to another.
+        """
+        replica = None
+
+        # Get replica to be deleted
+        data = self.get_collection_sate(collection=collection)
+        for rep in data['shards'][shard]['replicas']:
+            if data['shards'][shard]['replicas'][rep]['node_name'] == source_node:
+                replica = rep
+                break
+        if not replica:
+            logging.critical('Unable to find replica to be deleted!')
+            return {'status': 'failure', 'message': 'Unable to find replica to be deleted'}
+
+        # Add new replica
+        response = self.add_replica(collection=collection, shard=shard, node=destination_node)
+        if response['responseHeader']['status'] != 0:
+            logging.critical(self.pretty_format(response))
+            return {'status': 'failure', 'message': 'Status code not 0 for add_replica, see response key.', 'response': response}
+        logging.debug(self.pretty_format(response))
+
+        # Delete old replica
+        response = self.delete_replica(collection=collection, shard=shard, replica=replica)
+        if response['responseHeader']['status'] != 0:
+            self.pretty_print(response)
+            return {'status': 'failure', 'message': 'Status code not 0 for delete_replica, see response key.', 'response': response}
+        logging.debug(self.pretty_format(response))
+
+        return {'status': 'success'}
