@@ -65,7 +65,7 @@ def main():
     source = args.source[0]
     destination = args.destination[0]
 
-    data = solr_cloud.move_replica(
+    data = solr_cloud.move_shard(
         collection=collection,
         shard=shard,
         source_node=source,
