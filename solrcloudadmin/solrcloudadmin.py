@@ -263,9 +263,9 @@ class SolrCloudAdmin(object):
         else:
             return response
 
-    def move_replica(self, collection, shard, source_node, destination_node):
+    def move_shard(self, collection, shard, source_node, destination_node):
         """
-        Move a replica from one node to another.
+        Move a replica of a shard from one node to another.
         """
         replica = None
 
@@ -279,6 +279,17 @@ class SolrCloudAdmin(object):
             logging.critical('Unable to find replica to be deleted!')
             return {'status': 'failure', 'message': 'Unable to find replica to be deleted'}
 
+        return self.move_replica(
+            collection=collection,
+            shard=shard,
+            replica=replica,
+            destination_node=destination_node
+            )
+
+    def move_replica(self, collection, shard, replica, destination_node):
+        """
+        Move a specific replica from one node to another.
+        """
         # Add new replica
         response = self.add_replica(collection=collection, shard=shard, node=destination_node)
         if response['responseHeader']['status'] != 0:
