@@ -83,6 +83,15 @@ def main():
         limit = args.limit[0]
         logging.debug('limit: %s', limit)
 
+    # Reset request ID
+    response = solr_cloud.get_request_status('-1')
+    if response['status'] != 0:
+        logging.critical('Cleaning up stored states failed:\n%s', solr_cloud.pretty_format(response))
+        return
+
+    # Set starting point for request IDs
+    request_id = 1000
+
     count = 0
     while limit == 0 or count < limit:
         logging.debug('count: %d', count)
@@ -101,7 +110,8 @@ def main():
             collection=data['collection'],
             shard=data['shard'],
             replica=data['replica'],
-            destination_node=destination_node
+            destination_node=destination_node,
+            async=request_id
             )
         if data['status'] != 0:
             logging.critical(solr_cloud.pretty_format(data))
@@ -111,6 +121,9 @@ def main():
         # Repeat as limit allows
         if limit > 0:
             count += 1
+
+        # Increment request ID for next run
+        request_id += 1
 
 if __name__ == '__main__':
     main()
