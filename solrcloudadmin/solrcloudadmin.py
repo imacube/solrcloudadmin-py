@@ -5,6 +5,7 @@ Library to handel routine SolrCloud Administration.
 import logging
 import json
 import urllib2
+import time
 
 class SolrCloudAdmin(object):
     """
@@ -257,13 +258,20 @@ class SolrCloudAdmin(object):
         """
         base_path = """/admin/collections?action=REQUESTSTATUS&wt=json&requestid="""
 
-        response = self._query('%s%d' % (base_path, requestid))
+        response = self._query('%s%s' % (base_path, str(requestid)))
+        logging.debug('\n%s', self.pretty_format(response))
         if response['responseHeader']['status'] == 0:
-            return response['status']
+            return {
+                'status': 0,
+                'response': response
+                }
         else:
-            return response
+            return {
+                'status': 1,
+                'response': response
+                }
 
-    def move_shard(self, collection, shard, source_node, destination_node):
+    def move_shard(self, collection, shard, source_node, destination_node=None, async=None):
         """
         Move a replica of a shard from one node to another.
         """
@@ -283,15 +291,16 @@ class SolrCloudAdmin(object):
             collection=collection,
             shard=shard,
             replica=replica,
-            destination_node=destination_node
+            destination_node=destination_node,
+            async=async
             )
 
-    def move_replica(self, collection, shard, replica, destination_node):
+    def move_replica(self, collection, shard, replica, destination_node=None, async=None):
         """
         Move a specific replica from one node to another.
         """
         # Add new replica
-        response = self.add_replica(collection=collection, shard=shard, node=destination_node)
+        response = self.add_replica(collection=collection, shard=shard, node=destination_node, async=async)
         if response['responseHeader']['status'] != 0:
             logging.critical(self.pretty_format(response))
             return {
@@ -300,6 +309,34 @@ class SolrCloudAdmin(object):
                 'response': response
                 }
         logging.debug(self.pretty_format(response))
+
+        # Wait for job to finish
+        while True:
+            response = self.get_request_status(async)
+            if response['status'] != 0:
+                logging.critical(
+                    'Failed to check status of async request ID %s\n%s',
+                    str(async),
+                    self.pretty_format(response)
+                    )
+                return {
+                    'status': 1,
+                    'message': 'Unexpected request status result, see response key.',
+                    'response': response
+                }
+            elif response['response']['status']['state'] == 'running':
+                logging.debug('Waiting for job to finish...')
+                time.sleep(2)
+                continue
+            elif response['response']['status']['state'] == 'completed':
+                break
+            else:
+                logging.critical('Unexpected task state\n%s', self.pretty_format(response))
+                return {
+                    'status': 1,
+                    'message': 'Unexpected request status result, see response key.',
+                    'response': response
+                }
 
         # Delete old replica
         response = self.delete_replica(collection=collection, shard=shard, replica=replica)
