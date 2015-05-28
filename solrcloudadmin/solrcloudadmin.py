@@ -295,7 +295,7 @@ class SolrCloudAdmin(object):
         if response['responseHeader']['status'] != 0:
             logging.critical(self.pretty_format(response))
             return {
-                'status': 'failure',
+                'status': 1,
                 'message': 'Status code not 0 for add_replica, see response key.',
                 'response': response
                 }
@@ -306,10 +306,14 @@ class SolrCloudAdmin(object):
         if response['responseHeader']['status'] != 0:
             self.pretty_print(response)
             return {
-                'status': 'failure',
+                'status': 1,
                 'message': 'Status code not 0 for delete_replica, see response key.',
                 'response': response
                 }
         logging.debug(self.pretty_format(response))
 
-        return {'status': 'success'}
+        return {
+            'status': 0,
+            'message': 'See response key',
+            'response': response
+            }
