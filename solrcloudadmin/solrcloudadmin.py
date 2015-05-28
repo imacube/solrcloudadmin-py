@@ -251,7 +251,7 @@ class SolrCloudAdmin(object):
 
         return response
 
-    def check_request_status(self, requestid):
+    def get_request_status(self, requestid):
         """
         Check request status and return the result.
         """
