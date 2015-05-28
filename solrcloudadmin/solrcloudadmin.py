@@ -62,7 +62,15 @@ class SolrCloudAdmin(object):
 
         logging.debug('query_url: %s', query_url)
 
-        return json.load(urllib2.urlopen(query_url))
+        try:
+            return json.load(urllib2.urlopen(query_url))
+        except urllib2.HTTPError as exception:
+            logging.debug('Error returned when opening URL')
+            code = exception.code
+            reason = json.loads(exception.read())
+            logging.debug('code: %d', code)
+            logging.debug('reason: %s', reason)
+            return reason
 
     def _build_url(self, path):
         """
