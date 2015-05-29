@@ -310,7 +310,12 @@ class SolrCloudAdmin(object):
         Move a specific replica from one node to another.
         """
         # Add new replica
-        response = self.add_replica(collection=collection, shard=shard, node=destination_node, async=async)
+        response = self.add_replica(
+            collection=collection,
+            shard=shard,
+            node=destination_node,
+            async=async
+            )
         if response['responseHeader']['status'] != 0:
             logging.critical(self.pretty_format(response))
             return {
