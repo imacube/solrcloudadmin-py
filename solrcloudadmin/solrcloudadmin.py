@@ -53,7 +53,7 @@ class SolrCloudAdmin(object):
 
         return title_parts
 
-    def _query(self, path):
+    def _query(self, path, retry=3, sleep=10):
         """
         Run query against SolrCloud system.
 
@@ -63,24 +63,29 @@ class SolrCloudAdmin(object):
 
         logging.debug('query_url: %s', query_url)
 
-        try:
-            request = urllib2.urlopen(query_url)
-            data = request.read()
-            json_data = json.loads(data)
-            logging.debug('request data: %s', data)
-            logging.debug('json: %s: ', json_data)
-            return json_data
-        except urllib2.HTTPError as exception:
-            logging.debug('Error returned when opening URL')
-            code = exception.code
-            reason = exception.read()
-            logging.critical('code: %d', code)
-            logging.critical('reason: %s', reason)
-            return None
-        except ValueError as exception:
-            logging.critial('ValueError exception thrown when decoding JSON')
-            logging.critical('Raw data returned:\n%s', data)
-            return None
+        count = 0
+        while count <= retry:
+            count += 1
+            logging.debug('Try %d', count)
+
+            try:
+                request = urllib2.urlopen(query_url)
+                data = request.read()
+                json_data = json.loads(data)
+                logging.debug('request data: %s', data)
+                logging.debug('json: %s: ', json_data)
+                return json_data
+            except urllib2.HTTPError as exception:
+                logging.debug('Error returned when opening URL')
+                code = exception.code
+                reason = exception.read()
+                logging.error('code: %d', code)
+                logging.error('reason: %s', reason)
+            except ValueError as exception:
+                logging.critical('ValueError exception thrown when decoding JSON')
+                logging.critical('Raw data returned:\n%s', data)
+                return None
+            time.sleep(sleep)
 
     def _build_url(self, path):
         """
