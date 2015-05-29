@@ -38,6 +38,11 @@ def main():
         help="""The destination host as SolrCloud formated node_name."""
         )
     parser.add_argument(
+        '--async', nargs=1, dest='async', required=False,
+        type=int,
+        help="""Async request ID."""
+        )
+    parser.add_argument(
         '--debug', action='store_true', required=False,
         help="""Turn on debug logging."""
         )
@@ -64,12 +69,18 @@ def main():
     shard = args.shard[0]
     source = args.source[0]
     destination = args.destination[0]
+    async = None
+
+    if 'async' in vars(args):
+        async = args.async[0]
+        logging.debug('async = ', async)
 
     data = solr_cloud.move_shard(
         collection=collection,
         shard=shard,
         source_node=source,
-        destination_node=destination
+        destination_node=destination,
+        async=async
         )
     solr_cloud.pretty_print(data)
 
