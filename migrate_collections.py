@@ -4,7 +4,7 @@ Migrate collections from one host to another.
 
 import logging
 
-def find_collection(solr_cloud, source_node):
+def find_collection(solr_cloud, source_node, destination_node=None):
     """
     Find a collection that needs to be moved.
     """
@@ -13,6 +13,26 @@ def find_collection(solr_cloud, source_node):
         for shard in data['shards']:
             for replica in data['shards'][shard]['replicas']:
                 if data['shards'][shard]['replicas'][replica]['node_name'] == source_node:
+                    # Check destination for a copy of the shard
+                    if destination_node:
+                        response = check_destination(
+                            solr_cloud=solr_cloud,
+                            collection=collection,
+                            shard=shard,
+                            destination_node=destination_node
+                            )
+                        if response['status'] != 0:
+                            logging.warn(
+                                'Problem with destination for replica.\n\
+                                Response:\n\
+                                %s\n\
+                                Collection, shard, and replica information:\n\
+                                %s',
+                                solr_cloud.pretty_format(response),
+                                solr_cloud.pretty_format(data)
+                                )
+                            continue
+
                     return_dict = {
                         'collection': collection,
                         'shard': shard,
@@ -116,7 +136,11 @@ def main():
         logging.debug('count: %d', count)
         logging.debug('limit: %d', limit)
         # Find collection to move
-        data = find_collection(solr_cloud, source_node)
+        data = find_collection(
+            solr_cloud=solr_cloud,
+            source_node=source_node,
+            destination_node=destination_node
+            )
 
         if data is None:
             logging.info('No more collections found to migrate')
@@ -131,7 +155,11 @@ def main():
             )
         if response['status'] != 0:
             logging.critical(
-                'Problem with destination for replica.\nResponse:\n%s\nCollection, shard, and replica information:\n%s',
+                'Problem with destination for replica.\n\
+                Response:\n\
+                %s\n\
+                Collection, shard, and replica information:\n\
+                %s',
                 solr_cloud.pretty_format(response),
                 solr_cloud.pretty_format(data)
                 )
