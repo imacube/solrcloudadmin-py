@@ -85,7 +85,8 @@ class SolrCloudAdmin(object):
                 logging.critical('ValueError exception thrown when decoding JSON')
                 logging.critical('Raw data returned:\n%s', data)
                 return None
-            time.sleep(sleep)
+            if count <= retry:
+                time.sleep(sleep)
 
     def _build_url(self, path):
         """
