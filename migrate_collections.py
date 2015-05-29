@@ -101,7 +101,10 @@ def main():
     # Reset request ID
     response = solr_cloud.get_request_status('-1')
     if response['status'] != 0:
-        logging.critical('Cleaning up stored states failed:\n%s', solr_cloud.pretty_format(response))
+        logging.critical(
+            'Cleaning up stored states failed:\n%s',
+            solr_cloud.pretty_format(response)
+            )
         return
 
     # Set starting point for request IDs
