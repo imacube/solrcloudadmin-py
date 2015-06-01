@@ -4,6 +4,26 @@ Print count of collections per SolrCloud node.
 
 import logging
 
+LOGGER = None
+
+def configure_logging(log_level=logging.INFO):
+    """
+    Configure logging for this script.
+    :args log_level: logging level to set
+    """
+    global LOGGER
+    LOGGER = logging.getLogger('collection_count')
+    LOGGER.setLevel(log_level)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s.%(funcName)s, line %(lineno)d - \
+%(levelname)s - %(message)s'
+        )
+    console_handler.setFormatter(formatter)
+    LOGGER.addHandler(console_handler)
+    LOGGER.debug('Starting init of %s', 'collection_count')
+
 def main():
     """
     Called if run from command line.
@@ -34,11 +54,11 @@ def main():
 
     solr_cloud = None
     if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
-        solr_cloud = SolrCloudAdmin(url=args.url[0], loglevel=logging.DEBUG)
+        configure_logging(log_level=logging.DEBUG)
+        solr_cloud = SolrCloudAdmin(url=args.url[0], log_level=logging.DEBUG)
     else:
-        logging.basicConfig(level=logging.INFO)
-        solr_cloud = SolrCloudAdmin(url=args.url[0], loglevel=logging.INFO)
+        configure_logging(log_level=logging.INFO)
+        solr_cloud = SolrCloudAdmin(url=args.url[0], log_level=logging.INFO)
 
     response = solr_cloud.cluster_summary()
     solr_cloud.pretty_print(response)

@@ -4,6 +4,8 @@ Migrate collections from one host to another.
 
 import logging
 
+LOGGER = None
+
 def find_collection(solr_cloud, source_node, destination_node=None):
     """
     Find a collection that needs to be moved.
@@ -22,7 +24,7 @@ def find_collection(solr_cloud, source_node, destination_node=None):
                             destination_node=destination_node
                             )
                         if response['status'] != 0:
-                            logging.warn(
+                            LOGGER.warn(
                                 'Problem with destination for replica.\n\
                                 Response:\n\
                                 %s\n\
@@ -38,7 +40,7 @@ def find_collection(solr_cloud, source_node, destination_node=None):
                         'shard': shard,
                         'replica': replica
                         }
-                    logging.debug('Found match: %s', solr_cloud.pretty_format(return_dict))
+                    LOGGER.debug('Found match: %s', solr_cloud.pretty_format(return_dict))
                     return return_dict
 
 def check_destination(solr_cloud, collection, shard, destination_node):
@@ -56,9 +58,9 @@ def check_destination(solr_cloud, collection, shard, destination_node):
         'status': 0
         }
 
-def main():
+def parse_arguments():
     """
-    Called if run from command line.
+    Parse command line arguments.
     """
     import argparse
     parser = argparse.ArgumentParser(
@@ -92,7 +94,31 @@ def main():
         '--local_solrcloudadmin', action='store_true', required=False,
         help="""Import SolrCloudAdmin from local directory."""
         )
-    args = parser.parse_args()
+    return parser.parse_args()
+
+def configure_logging(log_level=logging.INFO):
+    """
+    Configure logging for this script.
+    :args log_level: logging level to set
+    """
+    global LOGGER
+    LOGGER = logging.getLogger('migrate_collections')
+    LOGGER.setLevel(log_level)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s.%(funcName)s, line %(lineno)d - \
+%(levelname)s - %(message)s'
+        )
+    console_handler.setFormatter(formatter)
+    LOGGER.addHandler(console_handler)
+    LOGGER.debug('Starting init of %s', 'migrate_collections')
+
+def main():
+    """
+    Called if run from command line.
+    """
+    args = parse_arguments()
 
     if args.local_solrcloudadmin:
         import sys
@@ -101,11 +127,21 @@ def main():
 
     solr_cloud = None
     if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
-        solr_cloud = SolrCloudAdmin(url=args.url[0], loglevel=logging.DEBUG)
+        configure_logging(log_level=logging.DEBUG)
+        solr_cloud = SolrCloudAdmin(
+            url=args.url[0],
+            log_level=logging.DEBUG,
+            max_retries=360,
+            retry_sleeptime=10
+            )
     else:
-        logging.basicConfig(level=logging.INFO)
-        solr_cloud = SolrCloudAdmin(url=args.url[0], loglevel=logging.INFO)
+        configure_logging(log_level=logging.INFO)
+        solr_cloud = SolrCloudAdmin(
+            url=args.url[0],
+            log_level=logging.INFO,
+            max_retries=360,
+            retry_sleeptime=10
+            )
 
     source_node = args.source_node[0]
     destination_node = None
@@ -113,15 +149,15 @@ def main():
 
     if 'destination_node' in vars(args):
         destination_node = args.destination_node[0]
-        logging.debug('destination_node: %s', destination_node)
+        LOGGER.debug('destination_node: %s', destination_node)
     if 'limit' in vars(args):
         limit = args.limit[0]
-        logging.debug('limit: %s', limit)
+        LOGGER.debug('limit: %s', limit)
 
     # Reset request ID
     response = solr_cloud.get_request_status('-1')
     if response['status'] != 0:
-        logging.critical(
+        LOGGER.critical(
             'Cleaning up stored states failed:\n%s',
             solr_cloud.pretty_format(response)
             )
@@ -131,10 +167,10 @@ def main():
     request_id = 1000
 
     count = 0
-    logging.info('Moving: collection shard replica')
+    LOGGER.info('Moving: collection shard replica')
     while limit == 0 or count < limit:
-        logging.debug('count: %d', count)
-        logging.debug('limit: %d', limit)
+        LOGGER.debug('count: %d', count)
+        LOGGER.debug('limit: %d', limit)
         # Find collection to move
         data = find_collection(
             solr_cloud=solr_cloud,
@@ -143,7 +179,7 @@ def main():
             )
 
         if data is None:
-            logging.info('No more collections found to migrate')
+            LOGGER.info('No more collections found to migrate')
             break
 
         # Check destination
@@ -154,7 +190,7 @@ def main():
             destination_node=destination_node
             )
         if response['status'] != 0:
-            logging.critical(
+            LOGGER.critical(
                 'Problem with destination for replica.\n\
                 Response:\n\
                 %s\n\
@@ -166,8 +202,8 @@ def main():
             break
 
         # Move that collection
-        logging.debug('Moving:\n%s', solr_cloud.pretty_format(data))
-        logging.info('Moving: %s %s %s', data['collection'], data['shard'], data['replica'])
+        LOGGER.debug('Moving:\n%s', solr_cloud.pretty_format(data))
+        LOGGER.info('Moving: %s %s %s', data['collection'], data['shard'], data['replica'])
         data = solr_cloud.move_replica(
             collection=data['collection'],
             shard=data['shard'],
@@ -176,9 +212,9 @@ def main():
             async=request_id
             )
         if data['status'] != 0:
-            logging.critical(solr_cloud.pretty_format(data))
+            LOGGER.critical(solr_cloud.pretty_format(data))
             break
-        logging.debug('move_replica response:\n%s', solr_cloud.pretty_format(data['response']))
+        LOGGER.debug('move_replica response:\n%s', solr_cloud.pretty_format(data['response']))
 
         # Repeat as limit allows
         if limit > 0:

@@ -12,11 +12,28 @@ class SolrCloudAdmin(object):
     Handles routine SolrCloud Administration.
     """
 
-    def __init__(self, url=None, loglevel=logging.INFO):
+    def __init__(self, url=None, log_level=logging.INFO, max_retries=3, retry_sleeptime=10):
         """
         Set the remote url to use for connections.
+        :arg url: URL to use for connections
+        :arg log_level: log level to set for all logging
+        :arg max_retries: Number of times to retry running a query against
+            SolrCloud cluster
+        :arg retry_sleeptime: How long in seconds to sleep between query retries
         """
-        logging.basicConfig(level=loglevel)
+        logger = logging.getLogger(__name__)
+        logger.setLevel(log_level)
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(log_level)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s.%(funcName)s, line %(lineno)d - \
+%(levelname)s - %(message)s'
+            )
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+        self.logger = logger
+        self.logger.debug('Starting init of %s', __name__)
+
         if not url.startswith('http://') and not url.startswith('https://'):
             url = 'http://' + url
 
@@ -25,7 +42,13 @@ class SolrCloudAdmin(object):
         else:
             self.url = url
 
-        logging.debug('self.url: %s', self.url)
+        self.logger.debug('self.url: %s', self.url)
+
+        self.max_retries = max_retries
+        self.logger.debug('max_retries = %d', max_retries)
+
+        self.retry_sleeptime = retry_sleeptime
+        self.logger.debug('retry_sleeptime = %d', retry_sleeptime)
 
     def parse_live_node_title(self, title):
         """
@@ -46,14 +69,14 @@ class SolrCloudAdmin(object):
             title_parts['host'], title_parts['port'], title_parts['path']
             )
 
-        logging.debug('host: %s', title_parts['host'])
-        logging.debug('port: %s', title_parts['port'])
-        logging.debug('path: %s', title_parts['path'])
-        logging.debug('url: %s', title_parts['url'])
+        self.logger.debug('host: %s', title_parts['host'])
+        self.logger.debug('port: %s', title_parts['port'])
+        self.logger.debug('path: %s', title_parts['path'])
+        self.logger.debug('url: %s', title_parts['url'])
 
         return title_parts
 
-    def _query(self, path, retry=3, sleep=10):
+    def _query(self, path):
         """
         Run query against SolrCloud system.
 
@@ -61,38 +84,38 @@ class SolrCloudAdmin(object):
         """
         query_url = self._build_url(path)
 
-        logging.debug('query_url: %s', query_url)
+        self.logger.debug('query_url: %s', query_url)
 
         count = 0
-        while count <= retry:
+        while count <= self.max_retries:
             count += 1
-            logging.debug('Try %d', count)
+            self.logger.debug('Try %d', count)
 
             try:
                 request = urllib2.urlopen(query_url)
                 data = request.read()
                 json_data = json.loads(data)
-                logging.debug('request data: %s', data)
-                logging.debug('json: %s: ', json_data)
+                self.logger.debug('request data: %s', data)
+                self.logger.debug('json: %s: ', json_data)
                 return json_data
             except urllib2.HTTPError as exception:
-                logging.debug('Error returned when opening URL')
+                self.logger.debug('Error returned when opening URL')
                 code = exception.code
                 reason = exception.read()
-                logging.error('code: %d', code)
-                logging.error('reason: %s', reason)
+                self.logger.error('code: %d', code)
+                self.logger.error('reason: %s', reason)
             except ValueError as exception:
-                logging.critical('ValueError exception thrown when decoding JSON')
-                logging.critical('Raw data returned:\n%s', data)
+                self.logger.critical('ValueError exception thrown when decoding JSON')
+                self.logger.critical('Raw data returned:\n%s', data)
                 return None
-            if count <= retry:
-                time.sleep(sleep)
+            if count <= self.max_retries:
+                time.sleep(self.retry_sleeptime)
 
     def _build_url(self, path):
         """
         Build URL with path for queries.
         """
-        logging.debug('path: %s', path)
+        self.logger.debug('path: %s', path)
 
         return self.url + path
 
@@ -138,7 +161,7 @@ class SolrCloudAdmin(object):
             state_json
         )
         data = json.loads(collection_data['znode']['data'])[collection]
-        logging.debug('\n%s', json.dumps(data, sort_keys=True, indent=4))
+        self.logger.debug('\n%s', json.dumps(data, sort_keys=True, indent=4))
         return data
 
     def list_collections_only(self):
@@ -166,7 +189,7 @@ class SolrCloudAdmin(object):
         return_count = 0
 
         for collection_item in self.list_collections_only():
-            logging.debug(collection_item)
+            self.logger.debug(collection_item)
             collections_list[collection_item] = self.get_collection_state(collection_item)
 
             if limit > 0:
@@ -181,7 +204,7 @@ class SolrCloudAdmin(object):
         Given a dictionary of collection data returns a summary dictionary
         of the collection's cores.
         """
-        logging.debug('collection_dict:\n%s', self.pretty_format(collection_dict))
+        self.logger.debug('collection_dict:\n%s', self.pretty_format(collection_dict))
 
         return_dict = dict()
         for shard in collection_dict['shards']:
@@ -245,7 +268,7 @@ class SolrCloudAdmin(object):
         if async:
             path = '%s&async=%s' % (path, str(async))
 
-        logging.debug('path: %s', path)
+        self.logger.debug('path: %s', path)
         response = self._query(path)
 
         return response
@@ -275,7 +298,7 @@ class SolrCloudAdmin(object):
         base_path = """/admin/collections?action=REQUESTSTATUS&wt=json&requestid="""
 
         response = self._query('%s%s' % (base_path, str(requestid)))
-        logging.debug('\n%s', self.pretty_format(response))
+        self.logger.debug('\n%s', self.pretty_format(response))
         if response['responseHeader']['status'] == 0:
             return {
                 'status': 0,
@@ -300,7 +323,7 @@ class SolrCloudAdmin(object):
                 replica = rep
                 break
         if not replica:
-            logging.critical('Unable to find replica to be deleted!')
+            self.logger.critical('Unable to find replica to be deleted!')
             return {'status': 'failure', 'message': 'Unable to find replica to be deleted'}
 
         return self.move_replica(
@@ -323,19 +346,19 @@ class SolrCloudAdmin(object):
             async=async
             )
         if response['responseHeader']['status'] != 0:
-            logging.critical(self.pretty_format(response))
+            self.logger.critical(self.pretty_format(response))
             return {
                 'status': 1,
                 'message': 'Status code not 0 for add_replica, see response key.',
                 'response': response
                 }
-        logging.debug(self.pretty_format(response))
+        self.logger.debug(self.pretty_format(response))
 
         # Wait for job to finish
         while True:
             response = self.get_request_status(async)
             if response['status'] != 0:
-                logging.critical(
+                self.logger.critical(
                     'Failed to check status of async request ID %s\n%s',
                     str(async),
                     self.pretty_format(response)
@@ -346,13 +369,13 @@ class SolrCloudAdmin(object):
                     'response': response
                 }
             elif response['response']['status']['state'] == 'running':
-                logging.debug('Waiting for job to finish...')
+                self.logger.debug('Waiting for job to finish...')
                 time.sleep(2)
                 continue
             elif response['response']['status']['state'] == 'completed':
                 break
             else:
-                logging.critical('Unexpected task state\n%s', self.pretty_format(response))
+                self.logger.critical('Unexpected task state\n%s', self.pretty_format(response))
                 return {
                     'status': 1,
                     'message': 'Unexpected request status result, see response key.',
@@ -368,7 +391,7 @@ class SolrCloudAdmin(object):
                 'message': 'Status code not 0 for delete_replica, see response key.',
                 'response': response
                 }
-        logging.debug(self.pretty_format(response))
+        self.logger.debug(self.pretty_format(response))
 
         return {
             'status': 0,

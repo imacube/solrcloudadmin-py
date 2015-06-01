@@ -4,6 +4,26 @@ Query request ID.
 
 import logging
 
+LOGGER = None
+
+def configure_logging(log_level=logging.INFO):
+    """
+    Configure logging for this script.
+    :args log_level: logging level to set
+    """
+    global LOGGER
+    LOGGER = logging.getLogger('query_request_id')
+    LOGGER.setLevel(log_level)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(log_level)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s.%(funcName)s, line %(lineno)d - \
+%(levelname)s - %(message)s'
+        )
+    console_handler.setFormatter(formatter)
+    LOGGER.addHandler(console_handler)
+    LOGGER.debug('Starting init of %s', 'query_request_id')
+
 def main():
     """
     Called if run from command line.
@@ -39,11 +59,11 @@ def main():
 
     solr_cloud = None
     if args.debug:
-        logging.basicConfig(level=logging.DEBUG)
-        solr_cloud = SolrCloudAdmin(url=args.url[0], loglevel=logging.DEBUG)
+        configure_logging(log_level=logging.DEBUG)
+        solr_cloud = SolrCloudAdmin(url=args.url[0], log_level=logging.DEBUG)
     else:
-        logging.basicConfig(level=logging.INFO)
-        solr_cloud = SolrCloudAdmin(url=args.url[0], loglevel=logging.INFO)
+        configure_logging(log_level=logging.INFO)
+        solr_cloud = SolrCloudAdmin(url=args.url[0], log_level=logging.INFO)
 
     request_id = args.request_id[0]
 
