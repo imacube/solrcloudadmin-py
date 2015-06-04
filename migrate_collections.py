@@ -107,6 +107,7 @@ def add_replicas(
 
     count = 0
     for collection, value in collection_list.items():
+        LOGGER.debug('loop count=%d', count)
         LOGGER.debug('collection: %s', collection)
         LOGGER.debug(
             'collection dict = %s',
@@ -179,6 +180,110 @@ shard %s. response = %s',
             break
     return True
 
+def delete_replicas(
+        solr_cloud,
+        collection_list,
+        source_node,
+        limit=0,
+        dryrun=False
+    ):
+    """
+    Del replicas for collections on source node.
+    """
+    if dryrun:
+        LOGGER.warn('This is a dry run!')
+    LOGGER.debug('dryrun=%s', dryrun)
+
+    count = 0
+    for collection, value in collection_list.items():
+        LOGGER.debug('loop count=%d', count)
+        LOGGER.debug('collection=%s', collection)
+        LOGGER.debug(
+            'collection dict=%s',
+            value
+            )
+        for shard, data in value['shards'].items():
+            LOGGER.debug('shard=%s', shard)
+            LOGGER.debug('data=%s', data)
+            # Check if source node has a copy of the collection, shard
+            if not check_node_snapshot(
+                    shard_data=data,
+                    node_to_check=source_node
+                ):
+                LOGGER.debug('No replica on source_node for shard=%s', shard)
+                continue
+            if not check_node_live(
+                    solr_cloud=solr_cloud,
+                    collection=collection,
+                    shard=shard,
+                    node_to_check=source_node
+                ):
+                LOGGER.warn(
+                    'Live state.json check does not list a replica for \
+collection=%s, shard=%s on the source_node=%s',
+                    collection,
+                    shard,
+                    source_node
+                    )
+                continue
+
+            # Check if replica count is greater then 1
+            LOGGER.debug(
+                'Replica count for collection=%s, shard=%s is %d',
+                collection,
+                shard,
+                len(data['replicas'])
+                )
+            if len(data['replicas']) < 2:
+                LOGGER.error(
+                    'Will not delete final replica of shard, count less then 2'
+                )
+                continue
+
+            # Find replica to delete
+            for replica_name, core in data['replicas'].items():
+                if core['node_name'] == source_node:
+                    replica = replica_name
+
+            if not replica:
+                LOGGER.warn(
+                    'Unable to find replica for collection=%s, shard=%s',
+                    collection,
+                    shard
+                    )
+                continue
+
+            LOGGER.info(
+                'Deleting replica=%s in collection=%s, shard=%s',
+                replica,
+                collection,
+                shard
+                )
+            count += 1
+
+            if dryrun:
+                continue
+
+            response = solr_cloud.delete_replica(
+                collection=collection,
+                shard=shard,
+                replica=replica
+                )
+            LOGGER.debug('response = %s', response)
+            if response['responseHeader']['status'] != 0 or 'error' in response:
+                LOGGER.error(
+                    'Unable to delete replica=%s for collection=%s, \
+shard=%s. response=%s',
+                    replica,
+                    collection,
+                    shard,
+                    response
+                    )
+
+        if limit > 0 and count >= limit:
+            break
+    return True
+
 def parse_arguments():
     """
     Parse command line arguments.
@@ -209,10 +314,14 @@ def parse_arguments():
         )
     parser.add_argument(
         '--add', action='store_true', required=False,
-        help="""Add a replica for collections on the source node."""
+        help="""Add replicas for collections found on the source node."""
         )
     parser.add_argument(
-        '--dryrun', action='store_true', required=False,
+        '--delete', action='store_true', required=False,
+        help="""Delete replicas from a collections found on the source node."""
+        )
+    parser.add_argument(
+        '--dry-run', action='store_true', required=False,
         help="""Simulate running."""
         )
     parser.add_argument(
@@ -258,7 +367,6 @@ def main():
         sys.path.append('solrcloudadmin')
         from solrcloudadmin import SolrCloudAdmin
 
-    solr_cloud = None
     if args.debug:
         configure_logging(logger_name='migrate_collections', log_level=logging.DEBUG)
         solr_cloud = SolrCloudAdmin(
@@ -277,30 +385,36 @@ def main():
             )
 
     source_node = args.source_node[0]
-    destination_node = None
-    limit = 0
 
-    if 'destination_node' in vars(args):
-        if args.destination_node:
-            destination_node = args.destination_node[0]
-            LOGGER.debug('destination_node: %s', destination_node)
-    if 'limit' in vars(args):
-        if args.limit:
-            limit = args.limit[0]
-            LOGGER.debug('limit: %s', limit)
+    if 'destination_node' in vars(args) and args.destination_node:
+        destination_node = args.destination_node[0]
+        LOGGER.debug('destination_node: %s', destination_node)
+    else:
+        destination_node = None
 
-    json_file = None
-    if 'json_file' in vars(args):
-        if args.json_file:
-            json_file = args.json_file[0]
+    if 'limit' in vars(args) and args.limit:
+        limit = args.limit[0]
+        LOGGER.debug('limit: %s', limit)
+    else:
+        limit = 0
 
-    dryrun = False
-    if 'dryrun' in vars(args):
-        if args.dryrun:
-            dryrun = True
+    if 'json_file' in vars(args) and args.json_file:
+        json_file = args.json_file[0]
+    else:
+        json_file = None
+
+    if 'dryrun' in vars(args) and args.dryrun:
+        dryrun = True
+    else:
+        dryrun = False
+
+    if args.add and args.delete:
+        LOGGER.critical('Can only use --add or --delete, not both')
+        return
 
     collection_list = get_collection_data(solr_cloud=solr_cloud, json_file=json_file)
-    if 'add' in vars(args):
+
+    if args.add:
         return_value = add_replicas(
             solr_cloud,
             collection_list,
@@ -310,7 +424,15 @@ def main():
             dryrun
             )
         LOGGER.info('add_replicas returned %s', return_value)
-    return
+    elif args.delete:
+        return_value = delete_replicas(
+            solr_cloud,
+            collection_list,
+            source_node,
+            limit,
+            dryrun
+            )
+        LOGGER.info('delete_replicas returned %s', return_value)
 
 if __name__ == '__main__':
     main()
