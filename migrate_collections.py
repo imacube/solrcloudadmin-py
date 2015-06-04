@@ -35,9 +35,9 @@ def check_node_live(solr_cloud, collection, shard, node_to_check):
         return False
     shard_data = solr_cloud.get_collection_state(collection=collection)['shards'][shard]
     for replica, core in shard_data['replicas'].items():
-        LOGGER.debug('replica = %s', replica)
-        LOGGER.debug('node_name = %s', core['node_name'])
-        LOGGER.debug('node_to_check = %s', node_to_check)
+        LOGGER.debug('replica=%s', replica)
+        LOGGER.debug('node_name=%s', core['node_name'])
+        LOGGER.debug('node_to_check=%s', node_to_check)
         if node_to_check == core['node_name']:
             return True
     return False
@@ -50,9 +50,9 @@ def check_node_snapshot(shard_data, node_to_check):
     if not node_to_check:
         return False
     for replica, core in shard_data['replicas'].items():
-        LOGGER.debug('replica = %s', replica)
-        LOGGER.debug('node_name = %s', core['node_name'])
-        LOGGER.debug('node_to_check = %s', node_to_check)
+        LOGGER.debug('replica=%s', replica)
+        LOGGER.debug('node_name=%s', core['node_name'])
+        LOGGER.debug('node_to_check=%s', node_to_check)
         if node_to_check == core['node_name']:
             return True
     return False
@@ -90,14 +90,14 @@ def add_replicas(
     """
     if dryrun:
         LOGGER.warn('This is a dry run!')
-    LOGGER.debug('dryrun = %s', dryrun)
+    LOGGER.debug('dryrun=%s', dryrun)
 
     # Reset request ID
     response = solr_cloud.get_request_status('-1')
-    LOGGER.debug('response = %s', response)
+    LOGGER.debug('response=%s', response)
     if response['responseHeader']['status'] != 0:
         LOGGER.critical(
-            'Cleaning up stored states failed:\nresponse = %s',
+            'Cleaning up stored states failed, response=%s',
             response
             )
         return False
@@ -108,21 +108,21 @@ def add_replicas(
     count = 0
     for collection, value in collection_list.items():
         LOGGER.debug('loop count=%d', count)
-        LOGGER.debug('collection: %s', collection)
+        LOGGER.debug('collection=%s', collection)
         LOGGER.debug(
-            'collection dict = %s',
+            'collection dict=%s',
             value
             )
         for shard, data in value['shards'].items():
-            LOGGER.debug('shard = %s', shard)
-            LOGGER.debug('data = %s', data)
+            LOGGER.debug('shard=%s', shard)
+            LOGGER.debug('data=%s', data)
             # Check if source node has a copy of the collection, shard
             if not check_node_snapshot(shard_data=data, node_to_check=source_node):
-                LOGGER.debug('No replica on source_node for shard %s', shard)
+                LOGGER.debug('No replica on source_node for shard=%s', shard)
                 continue
             if check_node_snapshot(shard_data=data, node_to_check=source_node):
                 LOGGER.warn(
-                    'Snapshot of state.json lists a replica on the destination_node %s',
+                    'Snapshot of state.json lists a replica on the destination_node=%s',
                     destination_node
                     )
                 continue
@@ -133,12 +133,12 @@ def add_replicas(
                     node_to_check=source_node
                 ):
                 LOGGER.warn(
-                    'Live state.json check lists a replica on the destination_node %s',
+                    'Live state.json check lists a replica on the destination_node=%s',
                     destination_node
                     )
 
             LOGGER.info(
-                'Adding replica for collection %s, shard %s',
+                'Adding replica for collection=%s, shard=%s',
                 collection,
                 shard
                 )
@@ -153,11 +153,11 @@ def add_replicas(
                 node=destination_node,
                 async=request_id
                 )
-            LOGGER.debug('response = %s', response)
+            LOGGER.debug('response=%s', response)
             if response['responseHeader']['status'] != 0 or 'error' in response:
                 LOGGER.error(
-                    'Unable to add replica for collection %s, \
-shard %s. response = %s',
+                    'Unable to add replica for collection=%s, \
+shard=%s. response=%s',
                     collection,
                     shard,
                     response
@@ -165,7 +165,7 @@ shard %s. response = %s',
                 continue
             if wait_for_async(solr_cloud, request_id):
                 LOGGER.info(
-                    'Successfully added replica for collection %s, shard %s',
+                    'Successfully added replica for collection=%s, shard=%s',
                     collection,
                     shard
                     )
@@ -269,7 +269,7 @@ collection=%s, shard=%s on the source_node=%s',
                 shard=shard,
                 replica=replica
                 )
-            LOGGER.debug('response = %s', response)
+            LOGGER.debug('response=%s', response)
             if response['responseHeader']['status'] != 0 or 'error' in response:
                 LOGGER.error(
                     'Unable to delete replica=%s for collection=%s, \
