@@ -202,6 +202,7 @@ def delete_replicas(
             'collection dict=%s',
             value
             )
+        replication_factor = int(value['replicationFactor'])
         for shard, data in value['shards'].items():
             LOGGER.debug('shard=%s', shard)
             LOGGER.debug('data=%s', data)
@@ -227,16 +228,31 @@ collection=%s, shard=%s on the source_node=%s',
                     )
                 continue
 
-            # Check if replica count is greater then 1
+            # Check if replica count os greater then 1 and above replication_factor
             LOGGER.debug(
                 'Replica count for collection=%s, shard=%s is %d',
                 collection,
                 shard,
                 len(data['replicas'])
                 )
-            if len(data['replicas']) < 2:
+            if len(data['replicas']) <= 1:
                 LOGGER.error(
-                    'Will not delete final replica of shard, count less then 2'
+                    'Will not delete final replica of collection=%s, shard=%s, \
+replica count is %d <= 1',
+                    collection,
+                    shard,
+                    len(data['replicas'])
+                )
+                continue
+            elif len(data['replicas']) <= replication_factor:
+                LOGGER.error(
+                    'Will not delete replica of collection=%s, shard=%s, \
+when replica count below or equal to replication factor, \
+count of replicas=%d <= replication_factor=%d',
+                    collection,
+                    shard,
+                    len(data['replicas']),
+                    replication_factor
                 )
                 continue
 
