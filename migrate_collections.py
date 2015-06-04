@@ -337,7 +337,7 @@ def parse_arguments():
         help="""Delete replicas from a collections found on the source node."""
         )
     parser.add_argument(
-        '--dry-run', action='store_true', required=False,
+        '--dry_run', action='store_true', required=False,
         help="""Simulate running."""
         )
     parser.add_argument(
@@ -419,7 +419,7 @@ def main():
     else:
         json_file = None
 
-    if 'dryrun' in vars(args) and args.dryrun:
+    if args.dry_run:
         dryrun = True
     else:
         dryrun = False
