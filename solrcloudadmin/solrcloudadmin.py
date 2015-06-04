@@ -149,6 +149,9 @@ class SolrCloudAdmin(object):
         """
         Return the state for the requested collection.
 
+        This includes information on shards, replicas, and other
+        important information.
+
         /zookeeper?detail=true&path=%2Fcollections%2Faws-stage-442%2Fstate.json
         """
         base_path = """/zookeeper?detail=true&path=%2Fcollections"""
@@ -298,17 +301,8 @@ class SolrCloudAdmin(object):
         base_path = """/admin/collections?action=REQUESTSTATUS&wt=json&requestid="""
 
         response = self._query('%s%s' % (base_path, str(requestid)))
-        self.logger.debug('\n%s', self.pretty_format(response))
-        if response['responseHeader']['status'] == 0:
-            return {
-                'status': 0,
-                'response': response
-                }
-        else:
-            return {
-                'status': 1,
-                'response': response
-                }
+        self.logger.debug('response = %s', response)
+        return response
 
     def move_shard(self, collection, shard, source_node, destination_node=None, async=None):
         """
