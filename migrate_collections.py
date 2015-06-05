@@ -62,13 +62,22 @@ def wait_for_async(solr_cloud, async):
     """
     Wait for an async job to finish.
     """
+    failed_queries = 0
     while True:
+        if failed_queries > 10:
+            LOGGER.critical('failed_queries=%d > 10', failed_queries)
+            return False
         response = solr_cloud.get_request_status(async)
         LOGGER.debug('response = %s', response)
         if response['status']['state'] == 'running':
             LOGGER.debug('Waiting for job to finish...')
+            failed_queries = 0
         elif response['status']['state'] == 'submitted':
             LOGGER.debug('Waiting for job to start...')
+            failed_queries = 0
+        elif response['status']['state'] == 'notfound':
+            LOGGER.warn('Did not find task for async ID %d.', async)
+            failed_queries += 1
         elif response['status']['state'] == 'completed':
             return True
         else:
