@@ -31,7 +31,7 @@ def check_node_live(solr_cloud, collection, shard, node_to_check):
     Pulls the current collection state.json and checks if the destination_node
     node already has a copy of the shard.
     """
-    if not node_to_check:
+    if node_to_check is None:
         return False
     shard_data = solr_cloud.get_collection_state(collection=collection)['shards'][shard]
     for replica, core in shard_data['replicas'].items():
@@ -47,7 +47,7 @@ def check_node_snapshot(shard_data, node_to_check):
     Uses the snapshot of the SolrCloud cluster state.json files and checks if
     the destination_node node already has a copy of the shard.
     """
-    if not node_to_check:
+    if node_to_check is None:
         return False
     for replica, core in shard_data['replicas'].items():
         LOGGER.debug('replica=%s', replica)
@@ -67,13 +67,14 @@ def wait_for_async(solr_cloud, async):
         LOGGER.debug('response = %s', response)
         if response['status']['state'] == 'running':
             LOGGER.debug('Waiting for job to finish...')
-            time.sleep(2)
-            continue
+        elif response['status']['state'] == 'submitted':
+            LOGGER.debug('Waiting for job to start...')
         elif response['status']['state'] == 'completed':
             return True
         else:
-            LOGGER.critical('Unexpected task state\nresponse = %s', response)
+            LOGGER.critical('Unexpected task state, response = %s', response)
             return False
+        time.sleep(2)
 
 def add_replicas(
         solr_cloud,
@@ -118,29 +119,45 @@ def add_replicas(
             LOGGER.debug('data=%s', data)
             # Check if source node has a copy of the collection, shard
             if not check_node_snapshot(shard_data=data, node_to_check=source_node):
-                LOGGER.debug('No replica on source_node for shard=%s', shard)
+                LOGGER.debug(
+                    'Snapshot of state.json does not list a replica \
+for collection=%s on source_node=%s for shard=%s',
+                    collection,
+                    source_node,
+                    shard
+                    )
                 continue
-            if check_node_snapshot(shard_data=data, node_to_check=source_node):
+            # Check if the destination node has a copy of the collection, shard
+            if check_node_snapshot(shard_data=data, node_to_check=destination_node):
                 LOGGER.warn(
-                    'Snapshot of state.json lists a replica on the destination_node=%s',
+                    'Snapshot of state.json lists a replica for \
+collection=%s, shard=%s, on the destination_node=%s',
+                    collection,
+                    shard,
                     destination_node
                     )
                 continue
+            # Check if the live destination node has the source shard
             if check_node_live(
                     solr_cloud=solr_cloud,
                     collection=collection,
                     shard=shard,
-                    node_to_check=source_node
+                    node_to_check=destination_node
                 ):
                 LOGGER.warn(
-                    'Live state.json check lists a replica on the destination_node=%s',
+                    'Live state.json check lists a replica for \
+collection=%s, shard=%s on the destination_node=%s',
+                    collection,
+                    shard,
                     destination_node
                     )
+                continue
 
             LOGGER.info(
-                'Adding replica for collection=%s, shard=%s',
+                'Adding replica for collection=%s, shard=%s, destination_node=%s',
                 collection,
-                shard
+                shard,
+                destination_node
                 )
             count += 1
 
@@ -157,17 +174,20 @@ def add_replicas(
             if response['responseHeader']['status'] != 0 or 'error' in response:
                 LOGGER.error(
                     'Unable to add replica for collection=%s, \
-shard=%s. response=%s',
+shard=%s, destination_node=%s. response=%s',
                     collection,
                     shard,
+                    destination_node,
                     response
                     )
                 continue
             if wait_for_async(solr_cloud, request_id):
                 LOGGER.info(
-                    'Successfully added replica for collection=%s, shard=%s',
+                    'Successfully added replica for \
+collection=%s, shard=%s, destination_node=%s',
                     collection,
-                    shard
+                    shard,
+                    destination_node
                     )
                 request_id += 1
             else:
@@ -230,7 +250,7 @@ collection=%s, shard=%s on the source_node=%s',
 
             # Check if replica count os greater then 1 and above replication_factor
             LOGGER.debug(
-                'Replica count for collection=%s, shard=%s is %d',
+                'Replica count of collection=%s, shard=%s is %d',
                 collection,
                 shard,
                 len(data['replicas'])
