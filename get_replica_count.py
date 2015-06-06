@@ -156,10 +156,20 @@ def main():
                 collection,
                 shard
                 )
+            node_name_dict = dict()
             for core, node_name in replicas.items():
                 output_string += 'core=%s,node_name=%s\n' % (core, node_name)
                 if filter_node_name and node_name == filter_node_name:
                     filter_print = True
+                if node_name in node_name_dict:
+                    node_name_dict[node_name] += 1
+                else:
+                    node_name_dict[node_name] = 1
+            for node_name, node_replica_count in node_name_dict.items():
+                output_string += 'node_name=%s,node_replica_count=%d\n' % (
+                    node_name,
+                    node_replica_count
+                    )
         if filter_node_name and filter_print:
             print(output_string, end='')
         elif not filter_node_name:
