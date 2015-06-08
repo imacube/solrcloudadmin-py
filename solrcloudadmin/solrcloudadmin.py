@@ -56,7 +56,7 @@ class SolrCloudAdmin(object):
 
         Keys: host, port, path
         """
-        title_parts = dict()
+        title_parts = {'node_name': title}
 
         split_title = title.split('_') # Split off path
         title_parts['path'] = split_title[1]
@@ -69,6 +69,7 @@ class SolrCloudAdmin(object):
             title_parts['host'], title_parts['port'], title_parts['path']
             )
 
+        self.logger.debug('node_name: %s', title)
         self.logger.debug('host: %s', title_parts['host'])
         self.logger.debug('port: %s', title_parts['port'])
         self.logger.debug('path: %s', title_parts['path'])
@@ -139,9 +140,10 @@ class SolrCloudAdmin(object):
         """
         response = self._query('/zookeeper?detail=true&path=%2Flive_nodes')
 
-        live_nodes = list()
+        live_nodes = dict()
         for node in response['tree'][0]['children']:
-            live_nodes.append(self.parse_live_node_title(node['data']['title']))
+            node_dict = self.parse_live_node_title(node['data']['title'])
+            live_nodes[node_dict['node_name']] = node_dict
 
         return live_nodes
 
@@ -226,14 +228,19 @@ class SolrCloudAdmin(object):
             return_dict[shard] = shard_dict
         return return_dict
 
-    def cluster_summary(self):
+    def collection_count(self):
         """
-        Build and return a summary of the distribution of collections.
+        Build and return a summary of the count of collections per Solr node.
         """
+
         node_list = dict()
-        collection_list = self.list_collection_data()
-        for collection in collection_list:
-            summary = self.collection_summary(collection_list[collection])
+        node_state = dict()
+        for node_name in self.list_live_nodes():
+            node_list[node_name] = 0
+            node_state[node_name] = 'live'
+
+        for collection_name, collection_data in self.list_collection_data().items():
+            summary = self.collection_summary(collection_data)
             for shard in summary:
                 for core in summary[shard]:
                     node_name = summary[shard][core]['node_name']
@@ -241,7 +248,8 @@ class SolrCloudAdmin(object):
                         node_list[node_name] += 1
                     else:
                         node_list[node_name] = 1
-        return node_list
+                        node_state[node_name] = 'down'
+        return {'node_list': node_list, 'node_state': node_state}
 
     def get_core_status(self, core=None):
         """

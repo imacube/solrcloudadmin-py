@@ -24,9 +24,9 @@ def configure_logging(log_level=logging.INFO):
     LOGGER.addHandler(console_handler)
     LOGGER.debug('Starting init of %s', 'collection_count')
 
-def main():
+def parse_arguments():
     """
-    Called if run from command line.
+    Parse command line arguments.
     """
     import argparse
     parser = argparse.ArgumentParser(
@@ -45,22 +45,26 @@ def main():
         '--local_solrcloudadmin', action='store_true', required=False,
         help="""Import SolrCloudAdmin from local directory."""
         )
-    args = parser.parse_args()
+    return parser.parse_args()
+
+def main():
+    """
+    Called if run from command line.
+    """
+    args = parse_arguments()
 
     if args.local_solrcloudadmin:
         import sys
         sys.path.append('solrcloudadmin')
         from solrcloudadmin import SolrCloudAdmin
 
-    solr_cloud = None
     if args.debug:
         configure_logging(log_level=logging.DEBUG)
-        solr_cloud = SolrCloudAdmin(url=args.url[0], log_level=logging.DEBUG)
     else:
         configure_logging(log_level=logging.INFO)
-        solr_cloud = SolrCloudAdmin(url=args.url[0], log_level=logging.INFO)
+    solr_cloud = SolrCloudAdmin(url=args.url[0], log_level=logging.INFO)
 
-    response = solr_cloud.cluster_summary()
+    response = solr_cloud.collection_count()
     solr_cloud.pretty_print(response)
 
 if __name__ == '__main__':
