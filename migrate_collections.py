@@ -366,6 +366,10 @@ def parse_arguments():
         help="""Delete replicas from a collections found on the source node."""
         )
     parser.add_argument(
+        '--migrate', action='store_true', required=False,
+        help="""Add collections from source to destination node and delete them from source node."""
+        )
+    parser.add_argument(
         '--dry_run', action='store_true', required=False,
         help="""Simulate running."""
         )
@@ -470,6 +474,26 @@ def main():
             )
         LOGGER.info('add_replicas returned %s', return_value)
     elif args.delete:
+        return_value = delete_replicas(
+            solr_cloud,
+            collection_list,
+            source_node,
+            limit,
+            dryrun
+            )
+        LOGGER.info('delete_replicas returned %s', return_value)
+    elif args.migrate:
+        return_value = add_replicas(
+            solr_cloud,
+            collection_list,
+            source_node,
+            destination_node,
+            limit,
+            dryrun
+            )
+        LOGGER.info('add_replicas returned %s', return_value)
+        LOGGER.info('Updating collection_list if needed')
+        collection_list = get_collection_data(solr_cloud=solr_cloud, json_file=json_file)
         return_value = delete_replicas(
             solr_cloud,
             collection_list,
