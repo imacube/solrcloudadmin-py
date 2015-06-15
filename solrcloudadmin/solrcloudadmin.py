@@ -236,7 +236,14 @@ class SolrCloudAdmin(object):
 
     def collection_count(self):
         """
-        Build and return a summary of the count of collections per Solr node.
+        This function has been renamed, count_all_cores
+        """
+        self.logger.warn('This function has been renamed count_all_cores')
+        return self.count_all_cores()
+
+    def count_all_cores(self):
+        """
+        Build and return a summary of the count of cores on all SolrCloud nodes, includes down nodes
         """
 
         node_list = dict()
@@ -245,7 +252,7 @@ class SolrCloudAdmin(object):
             node_list[node_name] = 0
             node_state[node_name] = 'live'
 
-        for collection_name, collection_data in self.list_collection_data().items():
+        for collection_data in self.list_collection_data().values():
             summary = self.collection_summary(collection_data)
             for shard in summary:
                 for core in summary[shard]:
@@ -256,6 +263,34 @@ class SolrCloudAdmin(object):
                         node_list[node_name] = 1
                         node_state[node_name] = 'down'
         return {'node_list': node_list, 'node_state': node_state}
+
+    def count_live_cores(self):
+        """
+        Return count of live cores, only works for live nodes
+        """
+        orig_url = self.url # Store URL to be reset at end
+
+        core_count_dict = {'node_list': dict()}
+
+        for key in self.list_live_nodes().values():
+            url = key['url']
+            node_name = key['node_name']
+
+            self.logger.debug('Setting url=%s', url)
+            self.set_url(url)
+
+            node_core_info = self.get_core_status()
+            core_count = len(node_core_info['status'].keys())
+            self.logger.debug(
+                'node_name=%s, core_count=%d',
+                node_name,
+                core_count
+                )
+
+            core_count_dict['node_list'][node_name] = core_count
+
+        self.set_url(orig_url)
+        return core_count_dict
 
     def get_core_status(self, core=None):
         """

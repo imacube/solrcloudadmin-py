@@ -1,5 +1,5 @@
 """
-Print count of collections per SolrCloud node.
+Return how many cores are on the node.
 """
 
 import logging
@@ -12,7 +12,7 @@ def configure_logging(log_level=logging.INFO):
     :args log_level: logging level to set
     """
     global LOGGER
-    LOGGER = logging.getLogger('collection_count')
+    LOGGER = logging.getLogger('get_core_count')
     LOGGER.setLevel(log_level)
     console_handler = logging.StreamHandler()
     console_handler.setLevel(log_level)
@@ -22,7 +22,7 @@ def configure_logging(log_level=logging.INFO):
         )
     console_handler.setFormatter(formatter)
     LOGGER.addHandler(console_handler)
-    LOGGER.debug('Starting init of %s', 'collection_count')
+    LOGGER.debug('Starting init of %s', 'get_core_status')
 
 def parse_arguments():
     """
@@ -30,20 +30,25 @@ def parse_arguments():
     """
     import argparse
     parser = argparse.ArgumentParser(
-        description='Print count of collections per SolrCloud node.'
+        description='Returns count of cores on node'
         )
     parser.add_argument(
         '--url', nargs=1, dest='url', required=True,
         type=str,
-        help="""The hostname or IP of the SolrCloud cluster, e.g. solrcloud:8983/solr"""
+        help='The hostname or IP of the SolrCloud node to count cores on or\
+use to access the rest of the cluster'
+        )
+    parser.add_argument(
+        '--live', action='store_true', required=False,
+        help="""Return the core count for live nodes in the cluster"""
+        )
+    parser.add_argument(
+        '--all', action='store_true', required=False,
+        help="""Return the core count for all nodes in the cluster, includes those that are down"""
         )
     parser.add_argument(
         '--debug', action='store_true', required=False,
         help="""Turn on debug logging."""
-        )
-    parser.add_argument(
-        '--local_solrcloudadmin', action='store_true', required=False,
-        help="""Import SolrCloudAdmin from local directory."""
         )
     return parser.parse_args()
 
@@ -53,19 +58,27 @@ def main():
     """
     args = parse_arguments()
 
-    if args.local_solrcloudadmin:
+    try:
+        from solrcloudadmin import SolrCloudAdmin
+    except:
         import sys
         sys.path.append('solrcloudadmin')
         from solrcloudadmin import SolrCloudAdmin
+
+    solr_cloud = SolrCloudAdmin(url=args.url[0], log_level=logging.INFO)
 
     if args.debug:
         configure_logging(log_level=logging.DEBUG)
     else:
         configure_logging(log_level=logging.INFO)
-    solr_cloud = SolrCloudAdmin(url=args.url[0], log_level=logging.INFO)
 
-    response = solr_cloud.collection_count()
-    solr_cloud.pretty_print(response)
+    if args.live:
+        print solr_cloud.pretty_format(solr_cloud.count_live_cores())
+    elif args.all:
+        print solr_cloud.pretty_format(solr_cloud.count_all_cores())
+    else:
+        data = solr_cloud.get_core_status()
+        print len(data['status'].keys())
 
 if __name__ == '__main__':
     main()
