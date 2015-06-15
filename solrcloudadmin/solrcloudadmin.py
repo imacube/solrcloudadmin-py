@@ -34,13 +34,7 @@ class SolrCloudAdmin(object):
         self.logger = logger
         self.logger.debug('Starting init of %s', __name__)
 
-        if not url.startswith('http://') and not url.startswith('https://'):
-            url = 'http://' + url
-
-        if url.endswith('/'):
-            self.url = url[:-1]
-        else:
-            self.url = url
+        self.set_url(url)
 
         self.logger.debug('self.url: %s', self.url)
 
@@ -49,6 +43,18 @@ class SolrCloudAdmin(object):
 
         self.retry_sleeptime = retry_sleeptime
         self.logger.debug('retry_sleeptime = %d', retry_sleeptime)
+
+    def set_url(self, url):
+        """
+        Set the URL to be used by queries
+        """
+        if not url.startswith('http://') and not url.startswith('https://'):
+            url = 'http://' + url
+
+        if url.endswith('/'):
+            self.url = url[:-1]
+        else:
+            self.url = url
 
     def parse_live_node_title(self, title):
         """
