@@ -1,3 +1,3 @@
 # solrcloudadmin-py
 
-Python library for carying out routine SolrCloud administrative tasks.
+Python library for carrying out routine SolrCloud administrative tasks.
