@@ -72,6 +72,11 @@ def parse_arguments():
         help="""Only results that have at least replica count will be returned."""
         )
     parser.add_argument(
+        '--low_count', nargs=1, dest='low_count', required=False,
+        type=int,
+        help="""Only results that have a replica count <= the value specified."""
+        )
+    parser.add_argument(
         '--debug', action='store_true', required=False,
         help="""Turn on debug logging."""
         )
@@ -137,6 +142,11 @@ def main():
     else:
         replica_count = None
 
+    if 'low_count' in var(args) and args.low_count:
+        low_count = args.low_count[0]
+    else:
+        low_count = None
+
     if not ('url' in vars(args) and args.url) and not\
         ('json_file' in vars(args) and args.json_file):
         LOGGER.critical('Need to set either --url or --json_file')
@@ -154,6 +164,8 @@ def main():
         output_string = ''
         for shard, replicas in shards.items():
             if replica_count and len(replicas) < replica_count:
+                continue
+            elif low_count and len(replicas) > low_count:
                 continue
             output_string += 'Summary: replicas=%d, collection=%s, shard=%s\n' % (
                 len(replicas),
