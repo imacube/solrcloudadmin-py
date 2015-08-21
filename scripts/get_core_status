@@ -58,6 +58,8 @@ def main():
         import sys
         sys.path.append('solrcloudadmin')
         from solrcloudadmin import SolrCloudAdmin
+    else:
+        from solrcloudadmin import SolrCloudAdmin
 
     solr_cloud = None
     if args.debug:

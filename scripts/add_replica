@@ -128,6 +128,8 @@ def main():
         import sys
         sys.path.append('solrcloudadmin')
         from solrcloudadmin import SolrCloudAdmin
+    else:
+        from solrcloudadmin import SolrCloudAdmin
 
     if args.debug:
         configure_logging(logger_name='add_replica', log_level=logging.DEBUG)

@@ -109,6 +109,8 @@ def main():
         import sys
         sys.path.append('solrcloudadmin')
         from solrcloudadmin import SolrCloudAdmin
+    else:
+        from solrcloudadmin import SolrCloudAdmin
 
     if args.debug:
         configure_logging('get_replica_count', log_level=logging.DEBUG)
