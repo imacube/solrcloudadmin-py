@@ -142,7 +142,7 @@ def main():
     else:
         replica_count = None
 
-    if 'low_count' in var(args) and args.low_count:
+    if 'low_count' in vars(args) and args.low_count:
         low_count = args.low_count[0]
     else:
         low_count = None
