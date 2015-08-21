@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Return how many cores are on the node.
 """

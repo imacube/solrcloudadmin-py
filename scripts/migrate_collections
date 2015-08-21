@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Migrate collections from one host to another.
 """
