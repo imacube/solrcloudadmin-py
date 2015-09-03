@@ -37,9 +37,10 @@ def main():
         description='Delete the specified collection replica.'
         )
     parser.add_argument(
-        '--url', nargs=1, dest='url', required=True,
+        '--url', nargs=1, dest='url', required=False,
         type=str,
-        help="""The hostname or IP of the SolrCloud cluster, e.g. solrcloud:8983/solr"""
+        default='localhost:8983/solr',
+        help="""The hostname or IP of the SolrCloud cluster. Default localhost:8983/solr"""
         )
     parser.add_argument(
         '--json_file', nargs=1, dest='json_file', required=True,
@@ -66,10 +67,10 @@ def main():
     solr_cloud = None
     if args.debug:
         configure_logging(log_level=logging.DEBUG)
-        solr_cloud = SolrCloudAdmin(url=args.url[0], log_level=logging.DEBUG)
+        solr_cloud = SolrCloudAdmin(url=args.url, log_level=logging.DEBUG)
     else:
         configure_logging(log_level=logging.INFO)
-        solr_cloud = SolrCloudAdmin(url=args.url[0], log_level=logging.INFO)
+        solr_cloud = SolrCloudAdmin(url=args.url, log_level=logging.INFO)
 
     json_file = args.json_file[0]
 

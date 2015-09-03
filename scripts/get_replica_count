@@ -54,7 +54,8 @@ def parse_arguments():
     parser.add_argument(
         '--url', nargs=1, dest='url', required=False,
         type=str,
-        help="""The hostname or IP of the SolrCloud cluster, e.g. solrcloud:8983/solr"""
+        default='localhost:8983/solr',
+        help="""The hostname or IP of the SolrCloud cluster. Default localhost:8983/solr"""
         )
     parser.add_argument(
         '--json_file', nargs=1, dest='json_file', required=False,
@@ -123,7 +124,7 @@ def main():
         configure_logging('get_replica_count', log_level=logging.INFO)
 
     if 'url' in vars(args) and args.url:
-        solr_cloud = SolrCloudAdmin(url=args.url[0], log_level=logging.INFO)
+        solr_cloud = SolrCloudAdmin(url=args.url, log_level=logging.INFO)
     else:
         solr_cloud = None
 

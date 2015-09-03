@@ -340,9 +340,10 @@ def parse_arguments():
         description='Migrates collections from one node to another.'
         )
     parser.add_argument(
-        '--url', nargs=1, dest='url', required=True,
+        '--url', nargs=1, dest='url', required=False,
         type=str,
-        help="""The hostname or IP of the SolrCloud cluster, e.g. solrcloud:8983/solr"""
+        default='localhost:8983/solr',
+        help="""The hostname or IP of the SolrCloud cluster. Default localhost:8983/solr"""
         )
     parser.add_argument(
         '--source_node', nargs=1, dest='source_node', required=True,
@@ -423,7 +424,7 @@ def main():
     if args.debug:
         configure_logging(logger_name='migrate_collections', log_level=logging.DEBUG)
         solr_cloud = SolrCloudAdmin(
-            url=args.url[0],
+            url=args.url,
             log_level=logging.INFO,
             max_retries=3,
             retry_sleeptime=10

@@ -48,6 +48,8 @@ class SolrCloudAdmin(object):
         """
         Set the URL to be used by queries
         """
+        if type(url) == list:
+            url = url[0]
         if not url.startswith('http://') and not url.startswith('https://'):
             url = 'http://' + url
 
