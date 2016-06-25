@@ -26,22 +26,22 @@ def configure_logging(log_level=logging.INFO):
     LOGGER.addHandler(console_handler)
     LOGGER.debug('Starting init of %s', 'move_replica')
 
-def main():
+def parse_arguments():
     """
-    Called if run from command line.
+    Parse the passed arguments
     """
     import argparse
     parser = argparse.ArgumentParser(
         description='Moves collection replica from one node to another'
         )
     parser.add_argument(
-        '--url', nargs=1, dest='url', required=False,
+        '--url', '-u', nargs=1, dest='url', required=False,
         type=str,
         default='localhost:8983/solr',
         help="""The hostname or IP of the SolrCloud cluster. Default localhost:8983/solr"""
         )
     parser.add_argument(
-        '-c', nargs=1, dest='collection', required=True,
+        '--collection', '-c', nargs=1, dest='collection', required=True,
         type=str,
         help="""The collection whose replica needs to be moved."""
         )
@@ -66,14 +66,20 @@ def main():
         help="""Async request ID."""
         )
     parser.add_argument(
-        '--debug', action='store_true', required=False,
+        '--debug', '-d', action='store_true', required=False,
         help="""Turn on debug logging."""
         )
     parser.add_argument(
         '--local_solrcloudadmin', action='store_true', required=False,
         help="""Import SolrCloudAdmin from local directory."""
         )
-    args = parser.parse_args()
+    return parser.parse_args()
+
+def main():
+    """
+    Called if run from command line.
+    """
+    args = parse_arguments()
 
     if args.local_solrcloudadmin:
         import sys
