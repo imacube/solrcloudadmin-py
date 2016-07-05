@@ -20,17 +20,30 @@ class MoveCollections(object):
     """
     Used to move collections
     """
-    def __init__(self, solr, source_node, destination_node=None):
+    def __init__(self, solr, source_node, destination_node=None, log_level=logging.INFO):
         self.solr = solr
         self.source_node = source_node
         self.destination_node = destination_node
-        self.max_workers = 10
+        self.max_workers = 5
+
+        logger = logging.getLogger(__name__)
+        logger.setLevel(log_level)
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(log_level)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s.%(funcName)s, line %(lineno)d - \
+%(levelname)s - %(message)s'
+            )
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+        self.logger = logger
+        self.logger.debug('Init complete for {}'.format(__name__))
 
     def build_colleciton_list(self):
         """
         Build a list of collections on host
         """
-        collection_list = self.solr.zookeeper_list_collections()
+        collection_list = self.solr.get_collections_on_node(node_name=self.source_node)
         collection_list = 'ryan-test0 ryan-test1 ryan-test2 ryan-test3 ryan-test4'.split()  # todo: delete when ready to use for real, limits migration to single collection
         return collection_list
 
@@ -40,7 +53,7 @@ class MoveCollections(object):
         """
         # Get a list of all shards and replicas on this host
         collection_state = self.solr.get_collection_state(collection=collection)[0][collection]
-        print(collection_state)
+        self.logger.debug('collection_state={}'.format(collection_state))
 
         # Add replicas for all the shards on this host to other hosts
         for shard, replicas in collection_state['shards'].items():
@@ -51,16 +64,16 @@ class MoveCollections(object):
                     if 'success' not in result.json():
                         raise Exception({'Msg': 'success not found in result', 'result': result.content})
                     else:
-                        print('replica added')
                         print('result: {}'.format(result.json()['success']))
         # Delete the collection off this host
         collection_state = self.solr.get_collection_state(collection=collection)[0][collection]
         for shard, replicas in collection_state['shards'].items():
             for replica_name, replica_data in replicas['replicas'].items():
                 if replica_data['node_name'] == self.source_node:
-                    print(replica_name, replica_data)
+                    self.logger.debug('replica_name={} replica_data={}'.format(replica_name, replica_data))
                     result = self.solr.delete_replica(collection=collection, shard=shard, replica=replica_name)
-                    print(result.json())
+                    self.logger.info('Deleted {} {} {}'.format(collection, shard, replica_name))
+                    self.logger.debug(result.json())
 
     def migrate_collections(self):
         """
@@ -131,7 +144,7 @@ def main():
 
     # Configure solr library
     solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=60)
-    move_collections = MoveCollections(solr=solr, source_node=source_node, destination_node=destination_node)
+    move_collections = MoveCollections(solr=solr, source_node=source_node, destination_node=destination_node, log_level=log_level)
     result = move_collections.migrate_collections()
     print(result)
 

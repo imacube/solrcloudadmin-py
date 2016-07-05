@@ -69,16 +69,23 @@ class SolrCloudCollectionsApi(object):
             self.solr_cloud_url = solr_cloud_url
         self.logger.debug('solr_cloud_url = %s' % solr_cloud_url)
 
-    def make_get_request(self, path, parameters):
+    def make_get_request(self, path, parameters=None, solr_cloud_url=None):
         """
         Make a get request to SolrCloud
         """
+        if not solr_cloud_url:
+            solr_cloud_url = self.solr_cloud_url
         return requests.get('%s%s' % (self.solr_cloud_url, path), params=parameters, timeout=self.timeout)
 
-    def build_request_path(self, action, base_path='/solr/admin/collections', json_format=True, **kwargs):
+    def build_request_path(self, action, base_path='/solr/admin/collections', api='collections', json_format=True, **kwargs):
         """
         Build the URL request path that will give a JSON formated response
         """
+        if api == 'collections':
+            base_path = '/solr/admin/collections'
+        elif api == 'cores':
+            base_path = '/solr/admin/cores'
+
         path = '%s?action=%s' % (base_path, action)
         parameters = dict()
         for key, value in kwargs.items():
@@ -115,6 +122,23 @@ class SolrCloudCollectionsApi(object):
         path, parameters = self.build_request_path(action=action)
         return self.make_get_request(path, parameters)
 
+    def get_core_status(self, node_name=None, core=None):
+        """
+        Get information for all cores on a SolrCloud node or
+        for a the specified core.
+        /admin/cores?action=STATUS&wt=json&core=<core to lookup>
+        """
+        action = 'STATUS'
+
+        # Parse node name
+        # 10.20.30.40:8983_solr
+        solr_cloud_url = None
+        if node_name:
+            solr_cloud_url = node_name.split('_')[0:1][0]
+
+        path, parameters = self.build_request_path(action=action, api='cores', core=core)
+        return self.make_get_request(path, parameters, solr_cloud_url=solr_cloud_url)
+
     def zookeeper_list_collections(self, zookeeper_urls=None):
         """
         List all collections by querying Zookeeper
@@ -135,8 +159,7 @@ class SolrCloudCollectionsApi(object):
         """
         Parse out the Zookeeper response from zk.get requests
         """
-        data[0] = json.loads(data[0].decode('utf-8'))
-        return data
+        return (json.loads(data[0].decode('utf-8')), data[1:])
 
     def get_collection_state(self, collection, zookeeper_urls=None):
         """
@@ -157,3 +180,35 @@ class SolrCloudCollectionsApi(object):
             raise e
         finally:
             zk.stop()
+
+    def get_live_solrcloud_nodes(self, zookeeper_urls=None):
+        """
+        Get a list of SolrCloud nodes
+        """
+        if not zookeeper_urls:
+            zookeeper_urls = self.zookeeper_urls
+        zk = KazooClient(hosts=zookeeper_urls)
+        zk.start() # Open connection to Zookeeper
+
+        try:
+            solrcloud_nodes = set()
+            for node in zk.get_children('/live_nodes'):
+                solrcloud_nodes.add(node)
+
+            return solrcloud_nodes
+        except Exception as e:
+            self.logger.critical(e)
+            raise e
+        finally:
+            zk.stop()
+
+    def parse_collection_name(self, core_name):
+        """
+        Parse out a collections name from its core name
+
+        Format: {collection name}_{shard}_{replica}
+        Reverse the string and trip off the first to parts using an _ seperator, then
+        rebuild the remainder part in proper order. Assumes that replica and shard names don't
+        have _ characters in them.
+        """
+        return str().join(map(str, core_name[::-1].split('_')[2:]))[::-1]
