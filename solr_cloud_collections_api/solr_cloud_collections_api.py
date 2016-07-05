@@ -37,7 +37,8 @@ class SolrCloudCollectionsApi(object):
         self.logger = logger
         self.logger.debug('Starting init of %s', __name__)
 
-        self.set_solr_cloud_url(solr_cloud_url)
+        self.solr_cloud_url = self.prepare_solr_cloud_url(solr_cloud_url)
+        self.logger.debug('solr_cloud_url = %s' % solr_cloud_url)
         self.set_zookeeper_urls(zookeeper_urls)
 
         self.timeout = timeout
@@ -56,7 +57,7 @@ class SolrCloudCollectionsApi(object):
         self.zookeeper_urls = zookeeper_urls
         self.logger.debug('zookeeper_urls = %s' % zookeeper_urls)
 
-    def set_solr_cloud_url(self, solr_cloud_url):
+    def prepare_solr_cloud_url(self, solr_cloud_url):
         """
         Set the URL of the SolrCloud cluster
         """
@@ -64,10 +65,9 @@ class SolrCloudCollectionsApi(object):
             solr_cloud_url = 'http://' + solr_cloud_url
 
         if solr_cloud_url.endswith('/'):
-            self.solr_cloud_url = solr_cloud_url[:-1]
+            return solr_cloud_url[:-1]
         else:
-            self.solr_cloud_url = solr_cloud_url
-        self.logger.debug('solr_cloud_url = %s' % solr_cloud_url)
+            return solr_cloud_url
 
     def make_get_request(self, path, parameters=None, solr_cloud_url=None):
         """
@@ -75,7 +75,10 @@ class SolrCloudCollectionsApi(object):
         """
         if not solr_cloud_url:
             solr_cloud_url = self.solr_cloud_url
-        return requests.get('%s%s' % (self.solr_cloud_url, path), params=parameters, timeout=self.timeout)
+        else:
+            solr_cloud_url = self.prepare_solr_cloud_url(solr_cloud_url)
+        self.logger.debug('Using solr_cloud_url = %s' % (solr_cloud_url))
+        return requests.get('%s%s' % (solr_cloud_url, path), params=parameters, timeout=self.timeout)
 
     def build_request_path(self, action, base_path='/solr/admin/collections', api='collections', json_format=True, **kwargs):
         """
@@ -130,7 +133,7 @@ class SolrCloudCollectionsApi(object):
         """
         action = 'STATUS'
 
-        # Parse node name
+        # Parse node name, also works if IP/HOSTNAME and Port
         # 10.20.30.40:8983_solr
         solr_cloud_url = None
         if node_name:
