@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Count all the collections on each of the SolrCloud nodes
+Find cores with problems
 """
 
 import sys
@@ -36,14 +36,9 @@ def parse_arguments():
         help="""Configuration file to load"""
         )
     parser.add_argument(
-        '--node', nargs=1, dest='node', required=False,
+        '--collection', nargs=1, dest='collection', required=False,
         default=False,
-        help="""Return count for a specific node"""
-        )
-    parser.add_argument(
-        '--all', action='store_true', required=False,
-        default=False,
-        help="""List all nodes, this is a slower option. Not yet implementd!"""
+        help="""Return count of replicas for collection"""
         )
     parser.add_argument(
         '--debug', action='store_true', required=False,
@@ -68,13 +63,23 @@ def main():
         log_level=logging.DEBUG
 
     # Configure solr library
-    solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
-    if args.node:
-        node = args.node[0]
-        print(node, len(solr.get_core_status(node_name=node).json()['status'].keys()))
+    solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level)
+
+    collection_list = None
+    if args.collection:
+        collection_list = args.collection
     else:
-        for node in sorted(solr.get_live_solrcloud_nodes()):
-            print(node, len(solr.get_core_status(node_name=node).json()['status'].keys()))
+        collection_list = solr.zookeeper_list_collections()
+
+    for collection in collection_list:
+        for shard_name, shard_data in solr.get_collection_state(collection)[0][collection]['shards'].items():
+            # print(shard_name, shard_data)
+            if shard_data['state'] != 'active':
+                print(collection, shard_name, shard_data)
+                break
+            for replica_name, replica_data in shard_data['replicas'].items():
+                if replica_data['state'] != 'active':
+                    print(collection, shard_name, replica_name, replica_data)
 
 if __name__ == '__main__':
     main()
