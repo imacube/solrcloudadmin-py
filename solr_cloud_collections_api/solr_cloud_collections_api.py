@@ -2,9 +2,9 @@
 Library to handel routine SolrCloud Administration.
 """
 
-from json.decoder import JSONDecodeError
 import json
 import logging
+from time import sleep
 
 from kazoo.client import KazooClient
 import requests
@@ -93,7 +93,16 @@ class SolrCloudCollectionsApi(object):
         else:
             solr_cloud_url = self.prepare_solr_cloud_url(solr_cloud_url)
         self.logger.debug('Using solr_cloud_url = %s' % (solr_cloud_url))
-        return requests.get('%s%s' % (solr_cloud_url, path), params=parameters, timeout=self.timeout)
+
+        response = None
+        for i in range(self.max_retries):
+            try:
+                response = requests.get('%s%s' % (solr_cloud_url, path), params=parameters, timeout=self.timeout)
+                if response:
+                    break
+            except:
+                sleep(self.retry_sleeptime)
+        return response
 
     def build_request_path(self, action, base_path='/solr/admin/collections', api='collections', json_format=True, **kwargs):
         """

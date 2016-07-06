@@ -31,10 +31,12 @@ class MoveCollections(object):
         logger.setLevel(log_level)
         console_handler = logging.StreamHandler()
         console_handler.setLevel(log_level)
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s.%(funcName)s, line %(lineno)d - \
-%(levelname)s - %(message)s'
-            )
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        if log_level == logging.DEBUG:
+            formatter = logging.Formatter(
+                '%(asctime)s - %(name)s.%(funcName)s, line %(lineno)d - \
+    %(levelname)s - %(message)s'
+                )
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
         self.logger = logger
@@ -75,8 +77,12 @@ class MoveCollections(object):
                     # print(replica_data['node_name'], self.source_node)
                     if replica_data['node_name'] == self.source_node:
                         result = self.solr.add_replica(collection=collection, shard=shard, node=self.destination_node)
-                        if 'success' not in result.json():
-                            raise Exception({'Msg': 'success not found in result', 'result': result.content})
+                        if result.status_code != 200:
+                            self.logger.critical({'Msg': 'return code not 200', 'result': result.text})
+                            return
+                        elif 'success' not in result.json():
+                            rself.logger.critical({'Msg': 'success not found in result', 'result': result.content})
+                            return
                         else:
                             self.logger.debug('result: {}'.format(result.json()['success']))
                             self.logger.info('Added replica to {} {}'.format(collection, shard))
@@ -87,8 +93,12 @@ class MoveCollections(object):
                     if replica_data['node_name'] == self.source_node:
                         self.logger.debug('replica_name={} replica_data={}'.format(replica_name, replica_data))
                         result = self.solr.delete_replica(collection=collection, shard=shard, replica=replica_name)
-                        self.logger.info('Deleted replica from {} {} {}'.format(collection, shard, replica_name))
-                        self.logger.debug(result.json())
+                        if result.status_code != 200:
+                            self.logger.critical({'Msg': 'return code not 200', 'result': result.text})
+                            return
+                        else:
+                            self.logger.info('Deleted replica from {} {} {}'.format(collection, shard, replica_name))
+                            self.logger.debug(result.json())
         except Exception as e:
             traceback.print_exc()
 
@@ -96,12 +106,28 @@ class MoveCollections(object):
         """
         Move all collections off the source_node to an optional destination_node
         """
-        collection_list = self.build_colleciton_list()
+        try:
+            collection_list = self.build_colleciton_list()
+        except:
+            traceback.print_exc()
+            sys.exit(2)
 
         workers = min(self.max_workers, len(collection_list))
-        with futures.ThreadPoolExecutor(workers) as executor:
-            res = executor.map(self.move_collection, collection_list)
-        return len(list(res))
+        with futures.ThreadPoolExecutor(max_workers=workers) as executor:
+            # res = executor.map(self.move_collection, collection_list)
+            to_do = []
+            for collection in collection_list:
+                future = executor.submit(self.move_collection, collection)
+                to_do.append(future)
+                self.logger.info('Scheduled migration of collection {}: {}'.format(collection, future))
+
+            results = []
+            for future in futures.as_completed(to_do):
+                future_result = future.result()
+                self.logger.info('{} result: {!r}'.format(future, future_result))
+                results.append(future_result)
+
+        return len(results)
 
 def load_configuation_files(
     general_configuration='config.ini'):
@@ -139,10 +165,6 @@ def parse_arguments():
         type=str,
         default=['config.ini'],
         help="""Configuration file to load"""
-        )
-    parser.add_argument(
-        '--dry-run', '-n', action='store_true', required=False,
-        help="""Goes through all the steps except adding the replica"""
         )
     parser.add_argument(
         '--debug', action='store_true', required=False,
