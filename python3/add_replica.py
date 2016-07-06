@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Count all the collections on each of the SolrCloud nodes
+Add a replica to a collection
 """
 
 import sys
@@ -36,14 +36,14 @@ def parse_arguments():
         help="""Configuration file to load"""
         )
     parser.add_argument(
-        '--node', nargs=1, dest='node', required=False,
+        '--collection', nargs=1, dest='collection', required=True,
         default=False,
-        help="""Return count for a specific node"""
+        help="""Return count of replicas for collection"""
         )
     parser.add_argument(
-        '--all', action='store_true', required=False,
+        '--shard', nargs=1, dest='shard', required=True,
         default=False,
-        help="""List all nodes, this is a slower option. Not yet implementd!"""
+        help="""Collection's shard to add a replica to"""
         )
     parser.add_argument(
         '--debug', action='store_true', required=False,
@@ -69,12 +69,13 @@ def main():
 
     # Configure solr library
     solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
-    if args.node:
-        node = args.node[0]
-        print(node, len(solr.get_core_status(node_name=node).json()['status'].keys()))
-    else:
-        for node in sorted(solr.get_live_solrcloud_nodes()):
-            print(node, len(solr.get_core_status(node_name=node).json()['status'].keys()))
+
+    response = solr.add_replica(args.collection[0], shard=args.shard[0], node=None)
+    try:
+        print(response.json())
+    except Exception as e:
+        print(response.text)
+        print(e)
 
 if __name__ == '__main__':
     main()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Count all the collections on each of the SolrCloud nodes
+Get the number of replicas for each collection, or the specified collection
 """
 
 import sys
@@ -36,14 +36,19 @@ def parse_arguments():
         help="""Configuration file to load"""
         )
     parser.add_argument(
-        '--node', nargs=1, dest='node', required=False,
+        '--collection', nargs=1, dest='collection', required=False,
         default=False,
-        help="""Return count for a specific node"""
+        help="""Return count of replicas for collection"""
         )
     parser.add_argument(
-        '--all', action='store_true', required=False,
+        '--lt', nargs=1, dest='lt', required=False,
         default=False,
-        help="""List all nodes, this is a slower option. Not yet implementd!"""
+        help="""Return count of replicas if less than this value"""
+        )
+    parser.add_argument(
+        '--gt', nargs=1, dest='gt', required=False,
+        default=False,
+        help="""Return count of replicas if greater than this value"""
         )
     parser.add_argument(
         '--debug', action='store_true', required=False,
@@ -68,13 +73,24 @@ def main():
         log_level=logging.DEBUG
 
     # Configure solr library
-    solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
-    if args.node:
-        node = args.node[0]
-        print(node, len(solr.get_core_status(node_name=node).json()['status'].keys()))
+    solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level)
+
+    collection_list = None
+    if args.collection:
+        collection_list = args.collection
     else:
-        for node in sorted(solr.get_live_solrcloud_nodes()):
-            print(node, len(solr.get_core_status(node_name=node).json()['status'].keys()))
+        collection_list = solr.zookeeper_list_collections()
+
+    for collection in collection_list:
+        for shard_name, shard_data in solr.get_collection_state(collection)[0][collection]['shards'].items():
+            if args.lt:
+                if len(shard_data['replicas']) < int(args.lt[0]):
+                    print(collection, shard_name, len(shard_data['replicas']))
+            elif args.gt:
+                if len(shard_data['replicas']) > int(args.gt[0]):
+                    print(collection, shard_name, len(shard_data['replicas']))
+            else:
+                print(collection, shard_name, len(shard_data['replicas']))
 
 if __name__ == '__main__':
     main()

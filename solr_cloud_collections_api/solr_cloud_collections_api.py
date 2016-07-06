@@ -2,9 +2,9 @@
 Library to handel routine SolrCloud Administration.
 """
 
-from json.decoder import JSONDecodeError
 import json
 import logging
+from time import sleep
 
 from kazoo.client import KazooClient
 import requests
@@ -40,6 +40,7 @@ class SolrCloudCollectionsApi(object):
         self.solr_cloud_url = self.prepare_solr_cloud_url(solr_cloud_url)
         self.logger.debug('solr_cloud_url = %s' % solr_cloud_url)
         self.set_zookeeper_urls(zookeeper_urls)
+        self.zk = self.connect_to_zookeepr()
 
         self.timeout = timeout
         self.logger.debug('timeout = %d' % timeout)
@@ -56,6 +57,20 @@ class SolrCloudCollectionsApi(object):
         """
         self.zookeeper_urls = zookeeper_urls
         self.logger.debug('zookeeper_urls = %s' % zookeeper_urls)
+
+    def connect_to_zookeepr(self):
+        """
+        Connect to zookeeper
+        """
+        zk = KazooClient(hosts=self.zookeeper_urls)
+        zk.start()
+        return zk
+
+    def __del__(self):
+        """
+        Remember to close out Zookeeper connections
+        """
+        self.zk.stop()
 
     def prepare_solr_cloud_url(self, solr_cloud_url):
         """
@@ -78,7 +93,16 @@ class SolrCloudCollectionsApi(object):
         else:
             solr_cloud_url = self.prepare_solr_cloud_url(solr_cloud_url)
         self.logger.debug('Using solr_cloud_url = %s' % (solr_cloud_url))
-        return requests.get('%s%s' % (solr_cloud_url, path), params=parameters, timeout=self.timeout)
+
+        response = None
+        for i in range(self.max_retries):
+            try:
+                response = requests.get('%s%s' % (solr_cloud_url, path), params=parameters, timeout=self.timeout)
+                if response:
+                    break
+            except:
+                sleep(self.retry_sleeptime)
+        return response
 
     def build_request_path(self, action, base_path='/solr/admin/collections', api='collections', json_format=True, **kwargs):
         """
@@ -98,7 +122,7 @@ class SolrCloudCollectionsApi(object):
             parameters['wt'] = 'json'
         return path, parameters
 
-    def add_replica(self, collection, shard='shard1', node=None):
+    def add_replica(self, collection, shard, node=None):
         """
         Add a replica to a collection
         /admin/collections?action=ADDREPLICA&collection=collection&shard=shard&node=solr_node_name
@@ -142,21 +166,14 @@ class SolrCloudCollectionsApi(object):
         path, parameters = self.build_request_path(action=action, api='cores', core=core)
         return self.make_get_request(path, parameters, solr_cloud_url=solr_cloud_url)
 
-    def zookeeper_list_collections(self, zookeeper_urls=None):
+    def zookeeper_list_collections(self):
         """
         List all collections by querying Zookeeper
         """
-        if not zookeeper_urls:
-            zookeeper_urls = self.zookeeper_urls
-        zk = KazooClient(hosts=zookeeper_urls)
-        zk.start()
-
         try:
-            return zk.get_children('/collections/')
+            return self.zk.get_children('/collections/')
         except Exception as e:
             self.logger.critical(e)
-        finally:
-            zk.stop()
 
     def parse_zookeeper_response(self, data):
         """
@@ -164,46 +181,32 @@ class SolrCloudCollectionsApi(object):
         """
         return (json.loads(data[0].decode('utf-8')), data[1:])
 
-    def get_collection_state(self, collection, zookeeper_urls=None):
+    def get_collection_state(self, collection):
         """
         Get the collection's state json file from zookeeper
         """
-        if not zookeeper_urls:
-            zookeeper_urls = self.zookeeper_urls
-        zk = KazooClient(hosts=zookeeper_urls)
-        zk.start() # Open connection to Zookeeper
-
         try:
             self.logger.debug('Get collection state for collection %s' % collection)
-            response = zk.get('/collections/%s/state.json' % collection)
+            response = self.zk.get('/collections/%s/state.json' % collection)
             self.logger.debug('response=%s' % str(response))
             return self.parse_zookeeper_response(list(response))
         except Exception as e:
             self.logger.critical(e)
             raise e
-        finally:
-            zk.stop()
 
-    def get_live_solrcloud_nodes(self, zookeeper_urls=None):
+    def get_live_solrcloud_nodes(self):
         """
         Get a list of SolrCloud nodes
         """
-        if not zookeeper_urls:
-            zookeeper_urls = self.zookeeper_urls
-        zk = KazooClient(hosts=zookeeper_urls)
-        zk.start() # Open connection to Zookeeper
-
         try:
             solrcloud_nodes = set()
-            for node in zk.get_children('/live_nodes'):
+            for node in self.zk.get_children('/live_nodes'):
                 solrcloud_nodes.add(node)
 
             return solrcloud_nodes
         except Exception as e:
             self.logger.critical(e)
             raise e
-        finally:
-            zk.stop()
 
     def parse_collection_name(self, core_name):
         """
@@ -214,4 +217,9 @@ class SolrCloudCollectionsApi(object):
         rebuild the remainder part in proper order. Assumes that replica and shard names don't
         have _ characters in them.
         """
-        return str().join(map(str, core_name[::-1].split('_')[2:]))[::-1]
+        collection = str()
+        for token in core_name.split('_')[:-2]:
+            collection += token + '_'
+        collection = collection[:-1]
+        replica, shard = core_name.split('_')[::-1][:2]
+        return collection, shard, replica
