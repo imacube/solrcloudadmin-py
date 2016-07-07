@@ -13,6 +13,8 @@ from configparser import ConfigParser, ExtendedInterpolation
 from concurrent import futures
 import traceback
 
+from tqdm import *
+
 sys.path.append('../solr_cloud_collections_api')
 from solr_cloud_collections_api import SolrCloudCollectionsApi
 
@@ -20,7 +22,7 @@ class MoveCollections(object):
     """
     Used to move collections
     """
-    def __init__(self, solr, source_node, limit, destination_node=None, log_level=logging.INFO):
+    def __init__(self, solr, source_node, limit, destination_node=None, log_level=logging.WARNING):
         self.solr = solr
         self.source_node = source_node
         self.destination_node = destination_node
@@ -115,7 +117,6 @@ class MoveCollections(object):
 
         workers = min(self.max_workers, len(collection_list))
         with futures.ThreadPoolExecutor(max_workers=workers) as executor:
-            # res = executor.map(self.move_collection, collection_list)
             to_do = []
             for collection in collection_list:
                 future = executor.submit(self.move_collection, collection)
@@ -123,10 +124,13 @@ class MoveCollections(object):
                 self.logger.info('Scheduled migration of collection {}: {}'.format(collection, future))
 
             results = []
-            for future in futures.as_completed(to_do):
+            completed = 0
+            for future in tqdm(futures.as_completed(to_do), total=len(to_do)):
                 future_result = future.result()
                 self.logger.info('{} result: {!r}'.format(future, future_result))
                 results.append(future_result)
+                completed += 1
+                self.logger.info('Completed {} of {} migrations'.format(completed, len(to_do)))
 
         return len(results)
 
@@ -171,6 +175,10 @@ def parse_arguments():
         '--debug', action='store_true', required=False,
         help="""Turn on debug logging."""
         )
+    parser.add_argument(
+        '--verbose', '-v', action='store_true', required=False,
+        help="""Turn on verbose logging."""
+        )
     return parser.parse_args()
 
 def main():
@@ -185,9 +193,11 @@ def main():
     solr_cloud_url = '%s' % (config['solr']['host'])
     zookeeper_urls = '%s' % (config['zookeeper']['host'])
 
-    log_level = logging.INFO
+    log_level = logging.WARNING
     if args.debug:
-        log_level=logging.DEBUG
+        log_level = logging.DEBUG
+    elif args.verbose:
+        log_level = logging.INFO
 
     source_node = args.source_node[0]
     destination_node = None
@@ -199,7 +209,8 @@ def main():
     move_collections = MoveCollections(solr=solr, source_node=source_node, limit=int(args.limit[0]), destination_node=destination_node, log_level=log_level)
 
     result = move_collections.migrate_collections()
-    print(result)
+    if args.verbose:
+        print(result)
 
 if __name__ == '__main__':
     main()
