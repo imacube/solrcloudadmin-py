@@ -125,7 +125,7 @@ class MoveCollections(object):
 
             results = []
             completed = 0
-            for future in tqdm(futures.as_completed(to_do), total=len(to_do)):
+            for future in tqdm(futures.as_completed(to_do), total=len(to_do), leave=True):
                 future_result = future.result()
                 self.logger.info('{} result: {!r}'.format(future, future_result))
                 results.append(future_result)
