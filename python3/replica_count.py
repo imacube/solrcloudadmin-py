@@ -83,14 +83,14 @@ def main():
 
     for collection in collection_list:
         for shard_name, shard_data in solr.get_collection_state(collection)[0][collection]['shards'].items():
+            if not args.lt and not args.gt:
+                print(collection, shard_name, len(shard_data['replicas']))
             if args.lt:
                 if len(shard_data['replicas']) < int(args.lt[0]):
                     print(collection, shard_name, len(shard_data['replicas']))
-            elif args.gt:
+            if args.gt:
                 if len(shard_data['replicas']) > int(args.gt[0]):
                     print(collection, shard_name, len(shard_data['replicas']))
-            else:
-                print(collection, shard_name, len(shard_data['replicas']))
 
 if __name__ == '__main__':
     main()

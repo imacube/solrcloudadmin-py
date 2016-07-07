@@ -79,10 +79,10 @@ class MoveCollections(object):
                         result = self.solr.add_replica(collection=collection, shard=shard, node=self.destination_node)
                         if result.status_code != 200:
                             self.logger.critical({'Msg': 'return code not 200', 'result': result.text})
-                            return
+                            return 'Failure'
                         elif 'success' not in result.json():
                             rself.logger.critical({'Msg': 'success not found in result', 'result': result.content})
-                            return
+                            return 'Failure'
                         else:
                             self.logger.debug('result: {}'.format(result.json()['success']))
                             self.logger.info('Added replica to {} {}'.format(collection, shard))
@@ -95,12 +95,13 @@ class MoveCollections(object):
                         result = self.solr.delete_replica(collection=collection, shard=shard, replica=replica_name)
                         if result.status_code != 200:
                             self.logger.critical({'Msg': 'return code not 200', 'result': result.text})
-                            return
+                            return 'Failure'
                         else:
                             self.logger.info('Deleted replica from {} {} {}'.format(collection, shard, replica_name))
                             self.logger.debug(result.json())
         except Exception as e:
             traceback.print_exc()
+        return 'Success'
 
     def migrate_collections(self):
         """

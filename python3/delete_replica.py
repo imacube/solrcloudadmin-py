@@ -30,23 +30,23 @@ def parse_arguments():
         description='Get colleciton count for each live node in the cluster'
         )
     parser.add_argument(
-        '--config', '-c', nargs=1, dest='config', required=False,
+        '--config', nargs=1, dest='config', required=False,
         type=str,
         default=['config.ini'],
         help="""Configuration file to load"""
         )
     parser.add_argument(
-        '--collection', nargs=1, dest='collection', required=True,
+        '--collection', '-c', nargs=1, dest='collection', required=True,
         type=str,
         help="""Collection to delete shard's replica from"""
         )
     parser.add_argument(
-        '--shard', nargs=1, dest='shard', required=True,
+        '--shard', '-s', nargs=1, dest='shard', required=True,
         type=str,
         help="""Collection's shard to delete the replica from"""
         )
     parser.add_argument(
-        '--replica', nargs=1, dest='replica', required=True,
+        '--replica', '-r', nargs=1, dest='replica', required=True,
         type=str,
         default=None,
         help="""Collection's shard's replica to delete"""
@@ -76,7 +76,11 @@ def main():
     # Configure solr library
     solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
 
-    response = solr.delete_replica(args.collection[0], shard=args.shard[0], replica=args.replica[0])
+    collection = args.collection[0]
+    shard = args.shard[0]
+    replica = args.replica[0]
+
+    response = solr.delete_replica(collection=collection, shard=shard, replica=replica)
     try:
         print(response.json())
     except Exception as e:
