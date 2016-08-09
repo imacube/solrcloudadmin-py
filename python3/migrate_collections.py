@@ -166,7 +166,7 @@ def parse_arguments():
         help="""Limit the number of collections to migrate"""
         )
     parser.add_argument(
-        '--config', '-c', nargs=1, dest='config', required=False,
+        '--config', nargs=1, dest='config', required=False,
         type=str,
         default=['config.ini'],
         help="""Configuration file to load"""

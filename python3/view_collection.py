@@ -31,13 +31,13 @@ def parse_arguments():
         description='Get colleciton count for each live node in the cluster'
         )
     parser.add_argument(
-        '--config', '-c', nargs=1, dest='config', required=False,
+        '--config', nargs=1, dest='config', required=False,
         type=str,
         default=['config.ini'],
         help="""Configuration file to load"""
         )
     parser.add_argument(
-        '--collection', nargs=1, dest='collection', required=True,
+        '--collection', '-c', nargs=1, dest='collection', required=True,
         type=str,
         help="""Collection to delete shard's replica from"""
         )

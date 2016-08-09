@@ -30,7 +30,7 @@ def parse_arguments():
         description='Get colleciton count for each live node in the cluster'
         )
     parser.add_argument(
-        '--config', '-c', nargs=1, dest='config', required=False,
+        '--config', nargs=1, dest='config', required=False,
         type=str,
         default=['config.ini'],
         help="""Configuration file to load"""
