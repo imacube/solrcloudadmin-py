@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 
 """
-Count all the collections on each of the SolrCloud nodes
+View collection state
 """
 
 import sys
 import logging
+import json
 import argparse
 from configparser import ConfigParser, ExtendedInterpolation
 
 import requests
 
-sys.path.append('../solr_cloud_collections_api')
-from solr_cloud_collections_api import SolrCloudCollectionsApi
+sys.path.append('../solrcloudadmin')
+from collections_api import CollectionsApi
 
 def load_configuation_files(
     general_configuration='config.ini'):
@@ -36,14 +37,9 @@ def parse_arguments():
         help="""Configuration file to load"""
         )
     parser.add_argument(
-        '--node', nargs=1, dest='node', required=False,
-        default=False,
-        help="""Return count for a specific node"""
-        )
-    parser.add_argument(
-        '--all', action='store_true', required=False,
-        default=False,
-        help="""List all nodes, this is a slower option. Not yet implementd!"""
+        '--collection', '-c', nargs=1, dest='collection', required=True,
+        type=str,
+        help="""Collection to delete shard's replica from"""
         )
     parser.add_argument(
         '--debug', action='store_true', required=False,
@@ -68,13 +64,10 @@ def main():
         log_level=logging.DEBUG
 
     # Configure solr library
-    solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
-    if args.node:
-        node = args.node[0]
-        print(node, len(solr.get_core_status(node_name=node).json()['status'].keys()))
-    else:
-        for node in sorted(solr.get_live_solrcloud_nodes()):
-            print(node, len(solr.get_core_status(node_name=node).json()['status'].keys()))
+    solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
+
+    response = solr.get_collection_state(collection=args.collection[0])[0]
+    print(json.dumps(response, indent=2))
 
 if __name__ == '__main__':
     main()

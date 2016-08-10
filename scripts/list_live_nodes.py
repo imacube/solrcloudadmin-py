@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-View collection state
+List live nodes
 """
 
 import sys
@@ -12,8 +12,8 @@ from configparser import ConfigParser, ExtendedInterpolation
 
 import requests
 
-sys.path.append('../solr_cloud_collections_api')
-from solr_cloud_collections_api import SolrCloudCollectionsApi
+sys.path.append('../solrcloudadmin')
+from collections_api import CollectionsApi
 
 def load_configuation_files(
     general_configuration='config.ini'):
@@ -28,18 +28,13 @@ def parse_arguments():
     Parse command line arguments.
     """
     parser = argparse.ArgumentParser(
-        description='Get colleciton count for each live node in the cluster'
+        description='List live nodes'
         )
     parser.add_argument(
         '--config', nargs=1, dest='config', required=False,
         type=str,
         default=['config.ini'],
         help="""Configuration file to load"""
-        )
-    parser.add_argument(
-        '--collection', '-c', nargs=1, dest='collection', required=True,
-        type=str,
-        help="""Collection to delete shard's replica from"""
         )
     parser.add_argument(
         '--debug', action='store_true', required=False,
@@ -64,10 +59,10 @@ def main():
         log_level=logging.DEBUG
 
     # Configure solr library
-    solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
+    solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
 
-    response = solr.get_collection_state(collection=args.collection[0])[0]
-    print(json.dumps(response, indent=2))
+    response = solr.get_live_solrcloud_nodes()
+    print(response)
 
 if __name__ == '__main__':
     main()

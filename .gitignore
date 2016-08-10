@@ -56,7 +56,4 @@ docs/_build/
 # PyBuilder
 target/
 
-python3/*.ini
-python3/test.py
-python3/view.py
-python3/reset.bash
+*.ini

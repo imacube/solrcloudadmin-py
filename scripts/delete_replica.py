@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Find cores with problems
+Delete a shard's replica from a collection
 """
 
 import sys
@@ -11,8 +11,8 @@ from configparser import ConfigParser, ExtendedInterpolation
 
 import requests
 
-sys.path.append('../solr_cloud_collections_api')
-from solr_cloud_collections_api import SolrCloudCollectionsApi
+sys.path.append('solrcloudadmin')
+collections_api import CollectionsApi
 
 def load_configuation_files(
     general_configuration='config.ini'):
@@ -36,9 +36,20 @@ def parse_arguments():
         help="""Configuration file to load"""
         )
     parser.add_argument(
-        '--collection', '-c', nargs=1, dest='collection', required=False,
-        default=False,
-        help="""Return count of replicas for collection"""
+        '--collection', '-c', nargs=1, dest='collection', required=True,
+        type=str,
+        help="""Collection to delete shard's replica from"""
+        )
+    parser.add_argument(
+        '--shard', '-s', nargs=1, dest='shard', required=True,
+        type=str,
+        help="""Collection's shard to delete the replica from"""
+        )
+    parser.add_argument(
+        '--replica', '-r', nargs=1, dest='replica', required=True,
+        type=str,
+        default=None,
+        help="""Collection's shard's replica to delete"""
         )
     parser.add_argument(
         '--debug', action='store_true', required=False,
@@ -63,23 +74,18 @@ def main():
         log_level=logging.DEBUG
 
     # Configure solr library
-    solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level)
+    solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
 
-    collection_list = None
-    if args.collection:
-        collection_list = args.collection
-    else:
-        collection_list = solr.zookeeper_list_collections()
+    collection = args.collection[0]
+    shard = args.shard[0]
+    replica = args.replica[0]
 
-    for collection in collection_list:
-        for shard_name, shard_data in solr.get_collection_state(collection)[0][collection]['shards'].items():
-            # print(shard_name, shard_data)
-            if shard_data['state'] != 'active':
-                print(collection, shard_name, shard_data)
-                break
-            for replica_name, replica_data in shard_data['replicas'].items():
-                if replica_data['state'] != 'active':
-                    print(collection, shard_name, replica_name, replica_data)
+    response = solr.delete_replica(collection=collection, shard=shard, replica=replica)
+    try:
+        print(response.json())
+    except Exception as e:
+        print(response.text)
+        print(e)
 
 if __name__ == '__main__':
     main()

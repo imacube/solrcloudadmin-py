@@ -15,8 +15,8 @@ import traceback
 
 from tqdm import *
 
-sys.path.append('../solr_cloud_collections_api')
-from solr_cloud_collections_api import SolrCloudCollectionsApi
+sys.path.append('../solrcloudadmin')
+from collections_api import CollectionsApi
 
 class MoveCollections(object):
     """
@@ -76,7 +76,6 @@ class MoveCollections(object):
             # Add replicas for all the shards on this host to other hosts
             for shard, replicas in collection_state['shards'].items():
                 for replica_name, replica_data in replicas['replicas'].items():
-                    # print(replica_data['node_name'], self.source_node)
                     if replica_data['node_name'] == self.source_node:
                         result = self.solr.add_replica(collection=collection, shard=shard, node=self.destination_node)
                         if result.status_code != 200:
@@ -205,7 +204,7 @@ def main():
         destination_node = args.destination_node[0]
 
     # Configure solr library
-    solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
+    solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
     move_collections = MoveCollections(solr=solr, source_node=source_node, limit=int(args.limit[0]), destination_node=destination_node, log_level=log_level)
 
     result = move_collections.migrate_collections()

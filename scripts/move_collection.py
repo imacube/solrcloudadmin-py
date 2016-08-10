@@ -12,8 +12,8 @@ import re
 import argparse
 from configparser import ConfigParser, ExtendedInterpolation
 
-sys.path.append('../solr_cloud_collections_api')
-from solr_cloud_collections_api import SolrCloudCollectionsApi
+sys.path.append('solrcloudadmin')
+collections_api import CollectionsApi
 
 def load_configuation_files(
     general_configuration='config.ini'):
@@ -100,7 +100,7 @@ def main():
     # Process source node
 
     # Configure solr library
-    solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level)
+    solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level)
     move_collection(solr=solr, collection=args.collection[0], source_node=args.source_node[0])
 
 if __name__ == '__main__':

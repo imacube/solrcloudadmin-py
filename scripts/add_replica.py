@@ -11,8 +11,8 @@ from configparser import ConfigParser, ExtendedInterpolation
 
 import requests
 
-sys.path.append('../solr_cloud_collections_api')
-from solr_cloud_collections_api import SolrCloudCollectionsApi
+sys.path.append('solrcloudadmin')
+collections_api import CollectionsApi
 
 def load_configuation_files(
     general_configuration='config.ini'):
@@ -68,7 +68,7 @@ def main():
         log_level=logging.DEBUG
 
     # Configure solr library
-    solr = SolrCloudCollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
+    solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
 
     response = solr.add_replica(args.collection[0], shard=args.shard[0], node=None)
     try:

@@ -9,7 +9,7 @@ from time import sleep
 from kazoo.client import KazooClient
 import requests
 
-class SolrCloudCollectionsApi(object):
+class CollectionsApi(object):
     """
     Call SolrCloud Collections API commands
     """
