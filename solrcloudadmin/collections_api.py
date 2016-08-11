@@ -6,7 +6,7 @@ import json
 import logging
 from time import sleep
 
-from kazoo.client import KazooClient
+from kazoo.client import KazooClient, KazooState
 import requests
 
 class CollectionsApi(object):
@@ -62,14 +62,27 @@ class CollectionsApi(object):
         """
         Connect to zookeeper
         """
-        zk = KazooClient(hosts=self.zookeeper_urls)
+        zk = KazooClient(hosts=self.zookeeper_urls, read_only=True)
         zk.start()
+        zk.add_listener(self.my_listener)
         return zk
+
+    def my_listener(self, state):
+        if state == KazooState.LOST:
+            self.logger.debug('Zookeeper connection session lost')
+            # print('Zookeeper connection session lost')
+        elif state == KazooState.SUSPENDED:
+            self.logger.debug('Zookeeper connection session being disconnected')
+            # print('Zookeeper connection session being disconnected')
+        else:
+            self.logger.debug('Zookeeper connection session being connected/reconnected')
+            # print('Zookeeper connection session being connected/reconnected')
 
     def __del__(self):
         """
         Remember to close out Zookeeper connections
         """
+        self.logger.debug('Closing connection to zookeeper')
         self.zk.stop()
 
     def prepare_solr_cloud_url(self, solr_cloud_url):
