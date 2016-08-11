@@ -70,23 +70,26 @@ class MoveCollections(object):
         Move the specified collection to the new host
         """
         try:
-            # Get a list of all shards and replicas on this host
+            # Get a list of all shards and replicas for this collection
             collection_state = self.solr.get_collection_state(collection=collection)[0][collection]
             self.logger.debug('collection_state={}'.format(collection_state))
             # Add replicas for all the shards on this host to other hosts
             for shard, replicas in collection_state['shards'].items():
                 for replica_name, replica_data in replicas['replicas'].items():
-                    if replica_data['node_name'] == self.source_node:
-                        result = self.solr.add_replica(collection=collection, shard=shard, node=self.destination_node)
-                        if result.status_code != 200:
-                            self.logger.critical({'Msg': 'return code not 200', 'result': result.text})
-                            return 'Failure'
-                        elif 'success' not in result.json():
-                            rself.logger.critical({'Msg': 'success not found in result', 'result': result.content})
-                            return 'Failure'
-                        else:
-                            self.logger.debug('result: {}'.format(result.json()['success']))
-                            self.logger.info('Added replica to {} {}'.format(collection, shard))
+                    if replica_data['node_name'] == self.destination_node:
+                        self.logger.warn('Replica already on destination_node: {} {} {}'.format(collection, shard, replica_name))
+                        return 'Failure'
+
+                result = self.solr.add_replica(collection=collection, shard=shard, node=self.destination_node)
+                if result.status_code != 200:
+                    self.logger.critical({'Msg': 'return code not 200 for solr.add_replica', 'result': result.text, 'collection': collection, 'shard': shard})
+                    return 'Failure'
+                elif 'success' not in result.json():
+                    self.logger.critical({'Msg': 'success not found in result for solr.add_replica', 'result': result.content, 'collection': collection, 'shard': shard})
+                    return 'Failure'
+                else:
+                    self.logger.debug('result: {}'.format(result.json()['success']))
+                    self.logger.info('Added replica to {} {}'.format(collection, shard))
             # Delete the collection off this host
             collection_state = self.solr.get_collection_state(collection=collection)[0][collection]
             for shard, replicas in collection_state['shards'].items():
@@ -95,7 +98,7 @@ class MoveCollections(object):
                         self.logger.debug('replica_name={} replica_data={}'.format(replica_name, replica_data))
                         result = self.solr.delete_replica(collection=collection, shard=shard, replica=replica_name)
                         if result.status_code != 200:
-                            self.logger.critical({'Msg': 'return code not 200', 'result': result.text})
+                            self.logger.critical({'Msg': 'return code not 200 for solr.delete_replica', 'result': result.text, 'collection': collection, 'shard': shard, 'replica_name': replica_name})
                             return 'Failure'
                         else:
                             self.logger.info('Deleted replica from {} {} {}'.format(collection, shard, replica_name))
