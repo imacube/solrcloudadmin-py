@@ -10,6 +10,7 @@ import argparse
 from configparser import ConfigParser, ExtendedInterpolation
 
 import requests
+from tqdm import *
 
 sys.path.append('../solrcloudadmin')
 from collections_api import CollectionsApi
@@ -43,7 +44,7 @@ def parse_arguments():
     parser.add_argument(
         '--all', action='store_true', required=False,
         default=False,
-        help="""List all nodes, this is a slower option. Not yet implementd!"""
+        help="""List all nodes, this is a slower option but it captures everything as it queries Zookeeper, the default queries the SolrCloud nodes"""
         )
     parser.add_argument(
         '--debug', action='store_true', required=False,
@@ -72,6 +73,18 @@ def main():
     if args.node:
         node = args.node[0]
         print(node, len(solr.get_core_status(node_name=node).json()['status'].keys()))
+    elif args.all:
+        solrcloud_nodes = dict()
+        for collection in tqdm(solr.zookeeper_list_collections(), leave=True):
+            response = solr.get_collection_state(collection)
+            for shard_name, shard_data in response[0][collection]['shards'].items():
+                for replica_name, replica_data in shard_data['replicas'].items():
+                    if replica_data['node_name'] in solrcloud_nodes:
+                        solrcloud_nodes[replica_data['node_name']] += 1
+                    else:
+                        solrcloud_nodes[replica_data['node_name']] = 1
+        for key in sorted(solrcloud_nodes.keys()):
+            print(key, solrcloud_nodes[key])
     else:
         for node in sorted(solr.get_live_solrcloud_nodes()):
             print(node, len(solr.get_core_status(node_name=node).json()['status'].keys()))
