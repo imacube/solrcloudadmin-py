@@ -62,7 +62,12 @@ def main():
     solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
 
     response = solr.get_live_solrcloud_nodes()
-    print(response)
+    try:
+        for node in sorted(response):
+            print(node)
+    except Exception as e:
+        print(response)
+        print(e)
 
 if __name__ == '__main__':
     main()
