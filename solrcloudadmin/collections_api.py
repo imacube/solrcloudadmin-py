@@ -14,7 +14,7 @@ class CollectionsApi(object):
     Call SolrCloud Collections API commands
     """
 
-    def __init__(self, solr_cloud_url=None, zookeeper_urls=None, log_level=logging.INFO, timeout=5, max_retries=3, retry_sleeptime=10):
+    def __init__(self, solr_cloud_url=None, zookeeper_urls=None, log_level=logging.INFO, timeout=30, max_retries=1, retry_sleeptime=10):
         """
         Set the remote url to use for connections.
         :arg solr_cloud: SolrCloud IP or hostname ane port
