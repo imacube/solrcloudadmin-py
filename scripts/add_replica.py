@@ -46,6 +46,11 @@ def parse_arguments():
         help="""Collection's shard to add a replica to"""
         )
     parser.add_argument(
+        '--node', nargs=1, dest='node', required=False,
+        default=False,
+        help="""SolrCloud node to add the replica to"""
+        )
+    parser.add_argument(
         '--debug', action='store_true', required=False,
         help="""Turn on debug logging."""
         )
@@ -70,7 +75,10 @@ def main():
     # Configure solr library
     solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
 
-    response = solr.add_replica(args.collection[0], shard=args.shard[0], node=None)
+    if args.node:
+        response = solr.add_replica(args.collection[0], shard=args.shard[0], node=args.node[0])
+    else:
+        response = solr.add_replica(args.collection[0], shard=args.shard[0], node=None)
     try:
         print(response.json())
     except Exception as e:
