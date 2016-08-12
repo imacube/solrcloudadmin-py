@@ -10,6 +10,7 @@ import argparse
 from configparser import ConfigParser, ExtendedInterpolation
 
 import requests
+from tqdm import *
 
 sys.path.append('../solrcloudadmin')
 from collections_api import CollectionsApi
@@ -71,15 +72,18 @@ def main():
     else:
         collection_list = solr.zookeeper_list_collections()
 
-    for collection in collection_list:
+    unhealthy_collections = list()
+
+    for collection in tqdm(collection_list, leave=True):
         for shard_name, shard_data in solr.get_collection_state(collection)[0][collection]['shards'].items():
-            # print(shard_name, shard_data)
             if shard_data['state'] != 'active':
-                print(collection, shard_name, shard_data)
+                unhealthy_collections.append((collection, shard_name, shard_data))
                 break
             for replica_name, replica_data in shard_data['replicas'].items():
                 if replica_data['state'] != 'active':
-                    print(collection, shard_name, replica_name, replica_data)
+                    unhealthy_collections.append((collection, shard_name, replica_name, replica_data))
+    for collection in unhealthy_collections:
+        print(collection)
 
 if __name__ == '__main__':
     main()
