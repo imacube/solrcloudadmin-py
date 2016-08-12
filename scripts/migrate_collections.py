@@ -12,6 +12,7 @@ import argparse
 from configparser import ConfigParser, ExtendedInterpolation
 from concurrent import futures
 import traceback
+from time import sleep
 
 from tqdm import *
 
@@ -74,22 +75,33 @@ class MoveCollections(object):
             collection_state = self.solr.get_collection_state(collection=collection)[0][collection]
             self.logger.debug('collection_state={}'.format(collection_state))
             # Add replicas for all the shards on this host to other hosts
-            for shard, replicas in collection_state['shards'].items():
+            for shard_name, replicas in collection_state['shards'].items():
                 for replica_name, replica_data in replicas['replicas'].items():
                     if replica_data['node_name'] == self.destination_node:
-                        self.logger.warn('Replica already on destination_node: {} {} {}'.format(collection, shard, replica_name))
+                        self.logger.warn('Replica already on destination_node: {} {} {}'.format(collection, shard_name, replica_name))
                         return 'Failure'
 
-                result = self.solr.add_replica(collection=collection, shard=shard, node=self.destination_node)
+                result = self.solr.add_replica(collection=collection, shard=shard_name, node=self.destination_node)
+                self.logger.debug('result: {}'.format(result.json()))
                 if result.status_code != 200:
-                    self.logger.critical({'Msg': 'return code not 200 for solr.add_replica', 'result': result.text, 'collection': collection, 'shard': shard})
+                    self.logger.critical({'Msg': 'return code not 200 for solr.add_replica', 'result': result.text, 'collection': collection, 'shard': shard_name})
                     return 'Failure'
                 elif 'success' not in result.json():
-                    self.logger.critical({'Msg': 'success not found in result for solr.add_replica', 'result': result.content, 'collection': collection, 'shard': shard})
+                    self.logger.critical({'Msg': 'success not found in result for solr.add_replica', 'result': result.content, 'collection': collection, 'shard': shard_name})
                     return 'Failure'
                 else:
-                    self.logger.debug('result: {}'.format(result.json()['success']))
-                    self.logger.info('Added replica to {} {}'.format(collection, shard))
+                    self.logger.info('Added replica to {} {}'.format(collection, shard_name))
+                # Wait for the replica to be fully created
+                new_core = result.json()['success']['']['core']
+                new_replica_state = ''
+                while new_replica_state != 'active':
+                    for replica_data in self.solr.get_collection_state(collection=collection)[0][collection]['shards'][shard_name]['replicas'].values():
+                        if replica_data['core'] == new_core:
+                            self.logger.debug('replica_data: {}'.format(replica_data))
+                            new_replica_state = replica_data['state']
+                            break
+                    sleep(30)
+
             # Delete the collection off this host
             collection_state = self.solr.get_collection_state(collection=collection)[0][collection]
             for shard, replicas in collection_state['shards'].items():
