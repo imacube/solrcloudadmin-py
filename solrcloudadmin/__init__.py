@@ -1,5 +1,4 @@
-__version__ = '0.10.1'
+__version__ = '0.11.0'
 
 from .collections_api import CollectionsApi
-# import CollectionsApi
-# from . import CollectionsApi
+from .scripts_library import ScriptsLibrary

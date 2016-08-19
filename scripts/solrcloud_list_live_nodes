@@ -11,17 +11,9 @@ import json
 import argparse
 from configparser import ConfigParser, ExtendedInterpolation
 
-import requests
+from solrcloudadmin import CollectionsApi, ScriptsLibrary
 
-from solrcloudadmin import CollectionsApi
-
-def load_configuation_files(
-    general_configuration='config.ini'):
-    config = ConfigParser(interpolation=ExtendedInterpolation())
-    if len(config.read(general_configuration)) == 0:
-        print('Unable to load %s' % general_configuration)
-        sys.exit(1)
-    return config
+SCRIPTS_LIBRARY = ScriptsLibrary()
 
 def parse_arguments():
     """
@@ -30,22 +22,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description='List live nodes'
         )
-    parser.add_argument(
-        '--profile', '-p', nargs=1, dest='profile', required=False,
-        type=str,
-        default=['DEFAULT'],
-        help="""Profile from configuration file to use, defaults to DEFAULT"""
-        )
-    parser.add_argument(
-        '--config', nargs=1, dest='config', required=False,
-        type=str,
-        default=['{}/.solrcloudadmin.config'.format(os.path.expanduser('~'))],
-        help="""Configuration file to load"""
-        )
-    parser.add_argument(
-        '--debug', action='store_true', required=False,
-        help="""Turn on debug logging."""
-        )
+    parser = SCRIPTS_LIBRARY.additional_arguments(parser)
     return parser.parse_args()
 
 def main():
@@ -55,7 +32,7 @@ def main():
     # Load command line arguments
     args = parse_arguments()
     # Load configuration file
-    config = load_configuation_files(args.config[0])
+    config = SCRIPTS_LIBRARY.load_configuation_files(args.config[0])
 
     profile = args.profile[0]
     solr_cloud_url = '%s' % (config[profile]['solrcloud'])

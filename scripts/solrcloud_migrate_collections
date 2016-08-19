@@ -15,9 +15,9 @@ import traceback
 from time import sleep
 
 from tqdm import *
+from solrcloudadmin import CollectionsApi, ScriptsLibrary
 
-sys.path.append('../solrcloudadmin')
-from collections_api import CollectionsApi
+SCRIPTS_LIBRARY = ScriptsLibrary()
 
 class MoveCollections(object):
     """
@@ -148,14 +148,6 @@ class MoveCollections(object):
 
         return len(results)
 
-def load_configuation_files(
-    general_configuration='config.ini'):
-    config = ConfigParser(interpolation=ExtendedInterpolation())
-    if len(config.read(general_configuration)) == 0:
-        print('Unable to load %s' % general_configuration)
-        sys.exit(1)
-    return config
-
 def parse_arguments():
     """
     Parse command line arguments.
@@ -163,6 +155,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description='Move a collection from one host to another'
         )
+    parser = SCRIPTS_LIBRARY.additional_arguments(parser, verbose=True)
     parser.add_argument(
         '--source-node', '-s', nargs=1, dest='source_node', required=True,
         type=str,
@@ -179,20 +172,6 @@ def parse_arguments():
         default=['0'],
         help="""Limit the number of collections to migrate"""
         )
-    parser.add_argument(
-        '--config', nargs=1, dest='config', required=False,
-        type=str,
-        default=['config.ini'],
-        help="""Configuration file to load"""
-        )
-    parser.add_argument(
-        '--debug', action='store_true', required=False,
-        help="""Turn on debug logging."""
-        )
-    parser.add_argument(
-        '--verbose', '-v', action='store_true', required=False,
-        help="""Turn on verbose logging."""
-        )
     return parser.parse_args()
 
 def main():
@@ -202,10 +181,11 @@ def main():
     # Load command line arguments
     args = parse_arguments()
     # Load configuration file
-    config = load_configuation_files(args.config[0])
+    config = SCRIPTS_LIBRARY.load_configuation_files(args.config[0])
 
-    solr_cloud_url = '%s' % (config['solr']['host'])
-    zookeeper_urls = '%s' % (config['zookeeper']['host'])
+    profile = args.profile[0]
+    solr_cloud_url = '%s' % (config[profile]['solrcloud'])
+    zookeeper_urls = '%s' % (config[profile]['zookeeper'])
 
     log_level = logging.WARNING
     if args.debug:

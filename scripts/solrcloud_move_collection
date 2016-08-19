@@ -12,8 +12,9 @@ import re
 import argparse
 from configparser import ConfigParser, ExtendedInterpolation
 
-sys.path.append('solrcloudadmin')
-collections_api import CollectionsApi
+from solrcloudadmin import CollectionsApi, ScriptsLibrary
+
+SCRIPTS_LIBRARY = ScriptsLibrary()
 
 def load_configuation_files(
     general_configuration='config.ini'):
@@ -90,8 +91,9 @@ def main():
     # Load command line arguments
     args = parse_arguments()
 
-    solr_cloud_url = '%s' % (config['solr']['host'])
-    zookeeper_urls = '%s' % (config['zookeeper']['host'])
+    profile = args.profile[0]
+    solr_cloud_url = '%s' % (config[profile]['solrcloud'])
+    zookeeper_urls = '%s' % (config[profile]['zookeeper'])
 
     log_level = logging.INFO
     if args.debug:

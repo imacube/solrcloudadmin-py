@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Find cores with problems
+Find unhealthy cores
 """
 
 import sys
@@ -9,19 +9,10 @@ import logging
 import argparse
 from configparser import ConfigParser, ExtendedInterpolation
 
-import requests
 from tqdm import *
+from solrcloudadmin import CollectionsApi, ScriptsLibrary
 
-sys.path.append('../solrcloudadmin')
-from collections_api import CollectionsApi
-
-def load_configuation_files(
-    general_configuration='config.ini'):
-    config = ConfigParser(interpolation=ExtendedInterpolation())
-    if len(config.read(general_configuration)) == 0:
-        print('Unable to load %s' % general_configuration)
-        sys.exit(1)
-    return config
+SCRIPTS_LIBRARY = ScriptsLibrary()
 
 def parse_arguments():
     """
@@ -30,20 +21,11 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description='Get colleciton count for each live node in the cluster'
         )
-    parser.add_argument(
-        '--config', nargs=1, dest='config', required=False,
-        type=str,
-        default=['config.ini'],
-        help="""Configuration file to load"""
-        )
+    parser = SCRIPTS_LIBRARY.additional_arguments(parser)
     parser.add_argument(
         '--collection', '-c', nargs=1, dest='collection', required=False,
         default=False,
         help="""Return count of replicas for collection"""
-        )
-    parser.add_argument(
-        '--debug', action='store_true', required=False,
-        help="""Turn on debug logging."""
         )
     return parser.parse_args()
 
@@ -54,10 +36,11 @@ def main():
     # Load command line arguments
     args = parse_arguments()
     # Load configuration file
-    config = load_configuation_files(args.config[0])
+    config = SCRIPTS_LIBRARY.load_configuation_files(args.config[0])
 
-    solr_cloud_url = '%s' % (config['solr']['host'])
-    zookeeper_urls = '%s' % (config['zookeeper']['host'])
+    profile = args.profile[0]
+    solr_cloud_url = '%s' % (config[profile]['solrcloud'])
+    zookeeper_urls = '%s' % (config[profile]['zookeeper'])
 
     log_level = logging.INFO
     if args.debug:
