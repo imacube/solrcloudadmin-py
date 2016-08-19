@@ -83,7 +83,9 @@ def main():
                 if replica_data['state'] != 'active':
                     unhealthy_collections.append((collection, shard_name, replica_name, replica_data))
     for collection in unhealthy_collections:
-        print(collection)
+        print('# ' + str(collection))
+        # print('python3 delete_replica.py -c {} -s {} -r {}'.format(collection[0], collection[1], collection[2]))
+        # print('python3 add_replica.py -c {} -s {} --node {}'.format(collection[0], collection[1], collection[3]['node_name']))
 
 if __name__ == '__main__':
     main()
