@@ -11,8 +11,7 @@ from configparser import ConfigParser, ExtendedInterpolation
 
 import requests
 
-sys.path.append('../solrcloudadmin')
-from collections_api import CollectionsApi
+from solrcloudadmin import CollectionsApi
 
 def load_configuation_files(
     general_configuration='config.ini'):

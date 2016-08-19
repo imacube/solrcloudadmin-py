@@ -1,3 +1,5 @@
-__version__ = '0.8.0'
+__version__ = '0.10.1'
 
-from .solrcloudadmin import CollectionsApi
+from .collections_api import CollectionsApi
+# import CollectionsApi
+# from . import CollectionsApi

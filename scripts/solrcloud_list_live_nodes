@@ -5,6 +5,7 @@ List live nodes
 """
 
 import sys
+import os
 import logging
 import json
 import argparse
@@ -12,8 +13,7 @@ from configparser import ConfigParser, ExtendedInterpolation
 
 import requests
 
-sys.path.append('../solrcloudadmin')
-from collections_api import CollectionsApi
+from solrcloudadmin import CollectionsApi
 
 def load_configuation_files(
     general_configuration='config.ini'):
@@ -31,9 +31,15 @@ def parse_arguments():
         description='List live nodes'
         )
     parser.add_argument(
+        '--profile', '-p', nargs=1, dest='profile', required=False,
+        type=str,
+        default=['DEFAULT'],
+        help="""Profile from configuration file to use, defaults to DEFAULT"""
+        )
+    parser.add_argument(
         '--config', nargs=1, dest='config', required=False,
         type=str,
-        default=['config.ini'],
+        default=['{}/.solrcloudadmin.config'.format(os.path.expanduser('~'))],
         help="""Configuration file to load"""
         )
     parser.add_argument(
@@ -51,8 +57,9 @@ def main():
     # Load configuration file
     config = load_configuation_files(args.config[0])
 
-    solr_cloud_url = '%s' % (config['solr']['host'])
-    zookeeper_urls = '%s' % (config['zookeeper']['host'])
+    profile = args.profile[0]
+    solr_cloud_url = '%s' % (config[profile]['solrcloud'])
+    zookeeper_urls = '%s' % (config[profile]['zookeeper'])
 
     log_level = logging.INFO
     if args.debug:

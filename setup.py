@@ -12,14 +12,8 @@ setup(
     packages=[
         'solrcloudadmin'
     ],
-    scripts=['scripts/add_replica.py',
-    'scripts/delete_down.py'
-    'scripts/delete_replica.py',
-    'scripts/migrate_collections.py',
-    'scripts/move_collection.py',
-    'scripts/replica_count.py',
-    'scripts/unhealthy_cores.py',
-    'scripts/view_collections.py'],
+    scripts=['scripts/solrcloud_add_replica.py',
+        'scripts/solrcloud_list_live_nodes'],
     url='http://github.com/imacube/solrcloudadmin-py',
     license='LICENSE',
     description='utility for running routine admin jobs on a SolrCloud cluster',
