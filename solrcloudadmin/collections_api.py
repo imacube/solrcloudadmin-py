@@ -106,6 +106,8 @@ class CollectionsApi(object):
         else:
             solr_cloud_url = self.prepare_solr_cloud_url(solr_cloud_url)
         self.logger.debug('Using solr_cloud_url = %s' % (solr_cloud_url))
+        self.logger.debug('path = %s' % (path))
+        self.logger.debug('parameters = %s' % (parameters))
 
         response = None
         for i in range(self.max_retries):
