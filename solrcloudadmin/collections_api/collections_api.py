@@ -7,7 +7,7 @@ import logging
 from time import sleep
 
 from kazoo.client import KazooClient, KazooState
-import requests
+# import requests
 
 class CollectionsApi(object):
     """
@@ -112,6 +112,7 @@ class CollectionsApi(object):
         response = None
         for i in range(self.max_retries):
             try:
+                import requests
                 response = requests.get('%s%s' % (solr_cloud_url, path), params=parameters, timeout=self.timeout)
                 if response:
                     break

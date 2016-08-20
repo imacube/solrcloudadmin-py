@@ -12,6 +12,11 @@ setup(
     packages=[
         'solrcloudadmin'
     ],
+    install_requires=[
+        'kazoo',
+        'requests',
+        'tqdm'
+    ],
     scripts=['scripts/solrcloud_add_replica',
         'scripts/solrcloud_cluster_details',
         'scripts/solrcloud_collection_count',
@@ -23,7 +28,8 @@ setup(
         'scripts/solrcloud_replica_count',
         'scripts/solrcloud_shard_count',
         'scripts/solrcloud_unhealthy_cores',
-        'scripts/solrcloud_view_collections'],
+        'scripts/solrcloud_view_collections'
+    ],
     url='http://github.com/imacube/solrcloudadmin-py',
     license='LICENSE',
     description='utility for running routine admin jobs on a SolrCloud cluster',
