@@ -4,25 +4,13 @@
 Move a collection off a host to another host
 """
 
-import sys
-import pprint
-import json
 import logging
-import re
 import argparse
-from configparser import ConfigParser, ExtendedInterpolation
 
-from solrcloudadmin import CollectionsApi, ScriptsLibrary
+from solrcloudadmin.collections_api import CollectionsApi
+from solrcloudadmin.scripts_library import ScriptsLibrary
 
 SCRIPTS_LIBRARY = ScriptsLibrary()
-
-def load_configuation_files(
-    general_configuration='config.ini'):
-    config = ConfigParser(interpolation=ExtendedInterpolation())
-    if len(config.read(general_configuration)) == 0:
-        print('Unable to load %s' % general_configuration)
-        sys.exit(1)
-    return config
 
 def parse_arguments():
     """
@@ -31,6 +19,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description='Move a collection from one host to another'
         )
+    parser = SCRIPTS_LIBRARY.additional_arguments(parser)
     parser.add_argument(
         '--collection', '-c', nargs=1, dest='collection', required=True,
         type=str,
@@ -49,10 +38,6 @@ def parse_arguments():
     parser.add_argument(
         '--dry-run', '-n', action='store_true', required=False,
         help="""Goes through all the steps except adding the replica"""
-        )
-    parser.add_argument(
-        '--debug', action='store_true', required=False,
-        help="""Turn on debug logging."""
         )
     return parser.parse_args()
 
@@ -87,7 +72,7 @@ def main():
     Main function to be called if run as a script
     """
     # Load configuration file
-    config = load_configuation_files()
+    config = SCRIPTS_LIBRARY.load_configuation_files(args.config[0])
     # Load command line arguments
     args = parse_arguments()
 

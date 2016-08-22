@@ -1,2 +1,3 @@
+kazoo
 requests
 tqdm

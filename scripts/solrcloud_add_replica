@@ -4,12 +4,11 @@
 Add a replica to a collection
 """
 
-import sys
 import logging
 import argparse
-from configparser import ConfigParser, ExtendedInterpolation
 
-from solrcloudadmin import CollectionsApi, ScriptsLibrary
+from solrcloudadmin.collections_api import CollectionsApi
+from solrcloudadmin.scripts_library import ScriptsLibrary
 
 SCRIPTS_LIBRARY = ScriptsLibrary()
 

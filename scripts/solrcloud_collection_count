@@ -4,13 +4,12 @@
 Count all the collections on each of the SolrCloud nodes
 """
 
-import sys
 import logging
 import argparse
-from configparser import ConfigParser, ExtendedInterpolation
 
-from tqdm import *
-from solrcloudadmin import CollectionsApi, ScriptsLibrary
+from tqdm import tqdm
+from solrcloudadmin.collections_api import CollectionsApi
+from solrcloudadmin.scripts_library import ScriptsLibrary
 
 SCRIPTS_LIBRARY = ScriptsLibrary()
 

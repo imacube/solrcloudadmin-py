@@ -4,14 +4,11 @@
 List live nodes
 """
 
-import sys
-import os
 import logging
-import json
 import argparse
-from configparser import ConfigParser, ExtendedInterpolation
 
-from solrcloudadmin import CollectionsApi, ScriptsLibrary
+from solrcloudadmin.collections_api import CollectionsApi
+from solrcloudadmin.scripts_library import ScriptsLibrary
 
 SCRIPTS_LIBRARY = ScriptsLibrary()
 
