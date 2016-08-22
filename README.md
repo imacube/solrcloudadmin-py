@@ -6,7 +6,9 @@ Requires python3.
 
 # Configuration File
 
-The scripts below look for a configuration file in the users home directory: `~/.solrcloudadmin.config`. Use `solrcloudadmin.config.sample` as an example of what it should contain.
+The scripts below look for a configuration file in the users home directory: `~/.solrcloudadmin.config`. Use `solrcloudadmin.config.sample` as an example of what it should contain. You can override the configuration file used by passing `--config` to any of the scripts.
+
+The configuration file uses profiles. This way one configuration file can be used for multiple environments. The user only needs to specify the profile to use, this is done with `-p` or `--profile`.
 
 # Scripts
 
