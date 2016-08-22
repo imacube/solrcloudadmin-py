@@ -13,9 +13,9 @@ setup(
         'solrcloudadmin'
     ],
     install_requires=[
-        'kazoo',
-        'requests',
-        'tqdm'
+        'kazoo>=2.2.1',
+        'requests>=2.11.1',
+        'tqdm>=4.8.4'
     ],
     scripts=['scripts/solrcloud-add-replica',
         'scripts/solrcloud-cluster-details',
