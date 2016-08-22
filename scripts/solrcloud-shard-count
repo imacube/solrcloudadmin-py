@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+"""
+Get the number of shards for each collection, or the specified collection
+"""
+
+import logging
+import argparse
+
+from tqdm import tqdm
+from solrcloudadmin.collections_api import CollectionsApi
+from solrcloudadmin.scripts_library import ScriptsLibrary
+
+SCRIPTS_LIBRARY = ScriptsLibrary()
+
+def parse_arguments():
+    """
+    Parse command line arguments.
+    """
+    parser = argparse.ArgumentParser(
+        description='Get shard count for every colleciton or a specific one'
+        )
+    parser = SCRIPTS_LIBRARY.additional_arguments(parser)
+    parser.add_argument(
+        '--collection', '-c', nargs=1, dest='collection', required=False,
+        default=False,
+        help="""Return count of shards for collection"""
+        )
+    parser.add_argument(
+        '--lt', nargs=1, dest='lt', required=False,
+        default=False,
+        help="""Return count of shards if less than this value"""
+        )
+    parser.add_argument(
+        '--gt', nargs=1, dest='gt', required=False,
+        default=False,
+        help="""Return count of chards if greater than this value"""
+        )
+    return parser.parse_args()
+
+def main():
+    """
+    Main function to be called if run as a script
+    """
+    # Load command line arguments
+    args = parse_arguments()
+    # Load configuration file
+    config = SCRIPTS_LIBRARY.load_configuation_files(args.config[0])
+
+    profile = args.profile[0]
+    solr_cloud_url = '%s' % (config[profile]['solrcloud'])
+    zookeeper_urls = '%s' % (config[profile]['zookeeper'])
+
+    log_level = logging.INFO
+    if args.debug:
+        log_level=logging.DEBUG
+
+    # Configure solr library
+    solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level)
+
+    collection_list = None
+    if args.collection:
+        collection_list = args.collection
+    else:
+        collection_list = solr.zookeeper_list_collections()
+
+    final_list = list()
+    for collection in tqdm(collection_list, leave=True):
+        shard_count = len(solr.get_collection_state(collection)[0][collection]['shards'])
+        if not args.lt and not args.gt:
+            final_list.append((collection, shard_count))
+        if args.lt:
+            if shard_count < int(args.lt[0]):
+                final_list.append((collection, shard_count))
+        if args.gt:
+            if shard_count > int(args.gt[0]):
+                final_list.append((collection, shard_count))
+
+    for collection in final_list:
+        print('{}, {}'.format(collection[0], collection[1]))
+
+if __name__ == '__main__':
+    main()

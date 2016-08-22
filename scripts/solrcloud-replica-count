@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+
+"""
+Get the number of replicas for each collection, or the specified collection
+"""
+
+import logging
+import argparse
+
+from solrcloudadmin.collections_api import CollectionsApi
+from solrcloudadmin.scripts_library import ScriptsLibrary
+
+SCRIPTS_LIBRARY = ScriptsLibrary()
+
+def parse_arguments():
+    """
+    Parse command line arguments.
+    """
+    parser = argparse.ArgumentParser(
+        description='Get colleciton count for each live node in the cluster'
+        )
+    parser = SCRIPTS_LIBRARY.additional_arguments(parser)
+    parser.add_argument(
+        '--collection', '-c', nargs=1, dest='collection', required=False,
+        default=False,
+        help="""Return count of replicas for collection"""
+        )
+    parser.add_argument(
+        '--lt', nargs=1, dest='lt', required=False,
+        default=False,
+        help="""Return count of replicas if less than this value"""
+        )
+    parser.add_argument(
+        '--gt', nargs=1, dest='gt', required=False,
+        default=False,
+        help="""Return count of replicas if greater than this value"""
+        )
+    return parser.parse_args()
+
+def main():
+    """
+    Main function to be called if run as a script
+    """
+    # Load command line arguments
+    args = parse_arguments()
+    # Load configuration file
+    config = SCRIPTS_LIBRARY.load_configuation_files(args.config[0])
+
+    profile = args.profile[0]
+    solr_cloud_url = '%s' % (config[profile]['solrcloud'])
+    zookeeper_urls = '%s' % (config[profile]['zookeeper'])
+
+    log_level = logging.INFO
+    if args.debug:
+        log_level=logging.DEBUG
+
+    # Configure solr library
+    solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level)
+
+    collection_list = None
+    if args.collection:
+        collection_list = args.collection
+    else:
+        collection_list = solr.zookeeper_list_collections()
+
+    for collection in collection_list:
+        for shard_name, shard_data in solr.get_collection_state(collection)[0][collection]['shards'].items():
+            if not args.lt and not args.gt:
+                print(collection, shard_name, len(shard_data['replicas']))
+            if args.lt:
+                if len(shard_data['replicas']) < int(args.lt[0]):
+                    print(collection, shard_name, len(shard_data['replicas']))
+            if args.gt:
+                if len(shard_data['replicas']) > int(args.gt[0]):
+                    print(collection, shard_name, len(shard_data['replicas']))
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+
+"""
+Find unhealthy cores
+"""
+
+import logging
+import argparse
+
+from tqdm import tqdm
+from solrcloudadmin.collections_api import CollectionsApi
+from solrcloudadmin.scripts_library import ScriptsLibrary
+
+SCRIPTS_LIBRARY = ScriptsLibrary()
+
+def parse_arguments():
+    """
+    Parse command line arguments.
+    """
+    parser = argparse.ArgumentParser(
+        description='Get colleciton count for each live node in the cluster'
+        )
+    parser = SCRIPTS_LIBRARY.additional_arguments(parser)
+    parser.add_argument(
+        '--collection', '-c', nargs=1, dest='collection', required=False,
+        default=False,
+        help="""Return count of replicas for collection"""
+        )
+    return parser.parse_args()
+
+def main():
+    """
+    Main function to be called if run as a script
+    """
+    # Load command line arguments
+    args = parse_arguments()
+    # Load configuration file
+    config = SCRIPTS_LIBRARY.load_configuation_files(args.config[0])
+
+    profile = args.profile[0]
+    solr_cloud_url = '%s' % (config[profile]['solrcloud'])
+    zookeeper_urls = '%s' % (config[profile]['zookeeper'])
+
+    log_level = logging.INFO
+    if args.debug:
+        log_level=logging.DEBUG
+
+    # Configure solr library
+    solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level)
+
+    collection_list = None
+    if args.collection:
+        collection_list = args.collection
+    else:
+        collection_list = solr.zookeeper_list_collections()
+
+    unhealthy_collections = list()
+
+    for collection in tqdm(collection_list, leave=True):
+        for shard_name, shard_data in solr.get_collection_state(collection)[0][collection]['shards'].items():
+            if shard_data['state'] != 'active':
+                unhealthy_collections.append((collection, shard_name, shard_data))
+                break
+            for replica_name, replica_data in shard_data['replicas'].items():
+                if replica_data['state'] != 'active':
+                    unhealthy_collections.append((collection, shard_name, replica_name, replica_data))
+    for collection in unhealthy_collections:
+        print('# ' + str(collection))
+        # print('python3 delete_replica.py -c {} -s {} -r {}'.format(collection[0], collection[1], collection[2]))
+        # print('python3 add_replica.py -c {} -s {} --node {}'.format(collection[0], collection[1], collection[3]['node_name']))
+
+if __name__ == '__main__':
+    main()

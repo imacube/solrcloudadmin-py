@@ -1,3 +1,1 @@
-__version__ = '0.5.0'
-
-from .solrcloudadmin import SolrCloudAdmin
+__version__ = '0.14.3'
