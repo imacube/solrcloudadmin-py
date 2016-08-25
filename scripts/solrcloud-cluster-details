@@ -23,6 +23,16 @@ def parse_arguments():
     parser = SCRIPTS_LIBRARY.additional_arguments(parser)
     return parser.parse_args()
 
+def summary(state_summary_totals, state):
+    """
+    Collect totals of different state types
+    """
+    if state not in state_summary_totals:
+        state_summary_totals[state] = 1
+    else:
+        state_summary_totals[state] += 1
+    return state_summary_totals
+
 def main():
     """
     Main function to be called if run as a script
@@ -44,18 +54,26 @@ def main():
     solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
 
     unhealthy_collections = list()
+    core_state_summary = dict()
+    collection_state_summary = dict()
     solrcloud_nodes = dict()
 
     for collection in tqdm(solr.zookeeper_list_collections(), leave=True):
         response = solr.get_collection_state(collection)
         for shard_name, shard_data in response[0][collection]['shards'].items():
+            collection_state_summary = summary(collection_state_summary, shard_data['state'])
+
             if shard_data['state'] != 'active':
                 unhealthy_collections.append((collection, shard_name, shard_data))
+
             for replica_name, replica_data in shard_data['replicas'].items():
+                core_state_summary = summary(core_state_summary, replica_data['state'])
+
                 if replica_data['node_name'] in solrcloud_nodes:
                     solrcloud_nodes[replica_data['node_name']] += 1
                 else:
                     solrcloud_nodes[replica_data['node_name']] = 1
+
                 if replica_data['state'] != 'active':
                     unhealthy_collections.append((collection, shard_name, replica_name, replica_data))
 
@@ -66,6 +84,22 @@ def main():
     print('\nUnhealthy collections')
     for collection in unhealthy_collections:
         print(collection)
+    print()
+
+    final_total = 0
+    print('Collection State Summary')
+    for state, total in collection_state_summary.items():
+        print('{} {}'.format(state, total))
+        final_total += total
+    print('total {}'.format(final_total))
+    print()
+
+    final_total = 0
+    print('Core State Summary')
+    for state, total in core_state_summary.items():
+        print('{} {}'.format(state, total))
+        final_total += total
+    print('total {}'.format(final_total))
 
 if __name__ == '__main__':
     main()
