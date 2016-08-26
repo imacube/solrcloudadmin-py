@@ -1,3 +1,7 @@
+# 0.16.0 (2016-08-26)
+
+Added simple script to get count of documents in a collection.
+
 # 0.15.0 (2016-08-25)
 
 Added summary of collection statuses to cluster details.
