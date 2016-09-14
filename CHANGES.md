@@ -1,3 +1,7 @@
+# 0.16.2 (2016-09-14)
+
+Forgot to update package version.
+
 # 0.16.1 (2016-09-14)
 
 Changed order of `solrcloud-cluster-details` final output,
