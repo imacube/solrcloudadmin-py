@@ -77,13 +77,14 @@ def main():
                 if replica_data['state'] != 'active':
                     unhealthy_collections.append((collection, shard_name, replica_name, replica_data))
 
+    print('Unhealthy collections')
+    for collection in unhealthy_collections:
+        print(collection)
+    print()
+
     print('Collection counts')
     for key in sorted(solrcloud_nodes.keys()):
         print(key, solrcloud_nodes[key])
-
-    print('\nUnhealthy collections')
-    for collection in unhealthy_collections:
-        print(collection)
     print()
 
     final_total = 0

@@ -1,3 +1,8 @@
+# 0.16.1 (2016-09-14)
+
+Changed order of `solrcloud-cluster-details` final output,
+'Unhealthy collections' will be printed first then collection counts.
+
 # 0.16.0 (2016-08-26)
 
 Added simple script to get count of documents in a collection.
