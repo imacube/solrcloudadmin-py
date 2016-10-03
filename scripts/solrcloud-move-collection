@@ -71,10 +71,12 @@ def main():
     """
     Main function to be called if run as a script
     """
-    # Load configuration file
-    config = SCRIPTS_LIBRARY.load_configuation_files(args.config[0])
+
     # Load command line arguments
     args = parse_arguments()
+
+    # Load configuration file
+    config = SCRIPTS_LIBRARY.load_configuation_files(args.config[0])
 
     profile = args.profile[0]
     solr_cloud_url = '%s' % (config[profile]['solrcloud'])
@@ -84,11 +86,14 @@ def main():
     if args.debug:
         log_level=logging.DEBUG
 
-    # Process source node
+    if args.destination_node:
+        destination_node = args.destination_node[0]
+    else:
+        destination_node = None
 
     # Configure solr library
     solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level)
-    move_collection(solr=solr, collection=args.collection[0], source_node=args.source_node[0])
+    move_collection(solr=solr, collection=args.collection[0], source_node=args.source_node[0], destination_node=destination_node)
 
 if __name__ == '__main__':
     main()

@@ -1,3 +1,7 @@
+# 0.16.3 (2016-10-03)
+
+Fixed bug with solrcloud-move-collection
+
 # 0.16.2 (2016-09-14)
 
 Forgot to update package version.
