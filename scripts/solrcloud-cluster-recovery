@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+
+"""
+Provide count of unhealthy collections, useful for when the cluster is recovering
+"""
+
+import argparse
+import logging
+from time import sleep
+
+from tqdm import tqdm
+from solrcloudadmin.collections_api import CollectionsApi
+from solrcloudadmin.scripts_library import ScriptsLibrary
+
+SCRIPTS_LIBRARY = ScriptsLibrary()
+
+def parse_arguments():
+    """
+    Parse command line arguments.
+    """
+    parser = argparse.ArgumentParser(
+        description='Monitor count of collections that are not in an active state'
+        )
+    parser = SCRIPTS_LIBRARY.additional_arguments(parser)
+    return parser.parse_args()
+
+def main():
+    """
+    Main function to be called if run as a script
+    """
+    # Load command line arguments
+    args = parse_arguments()
+    # Load configuration file
+    config = SCRIPTS_LIBRARY.load_configuation_files(args.config[0])
+
+    profile = args.profile[0]
+    solr_cloud_url = '%s' % (config[profile]['solrcloud'])
+    zookeeper_urls = '%s' % (config[profile]['zookeeper'])
+
+    log_level = logging.INFO
+    if args.debug:
+        log_level=logging.DEBUG
+
+    # Configure solr library
+    solr = CollectionsApi(solr_cloud_url=solr_cloud_url, zookeeper_urls=zookeeper_urls, log_level=log_level, timeout=300)
+
+    unhealthy_collections = set(solr.zookeeper_list_collections())
+    unhealthy_replicas = set(unhealthy_collections)
+
+    while len(unhealthy_collections | unhealthy_replicas) > 0:
+        for collection in tqdm((unhealthy_collections | unhealthy_replicas), leave=True):
+            response = solr.get_collection_state(collection)
+            for shard_name, shard_data in response[0][collection]['shards'].items():
+                if shard_data['state'] == 'active':
+                    if collection in unhealthy_collections:
+                        unhealthy_collections.remove(collection)
+
+                unhealthy_replica_found = False
+                for replica_name, replica_data in shard_data['replicas'].items():
+                    if replica_data['state'] not in ('active', 'construction'):
+                        unhealthy_replica_found = True
+                        break
+                if not unhealthy_replica_found:
+                    if collection in unhealthy_replicas:
+                        unhealthy_replicas.remove(collection)
+
+        print()
+        print('Unhealthy Collections: ', len(unhealthy_collections))
+        print('Unhealthy Replicas', len(unhealthy_replicas))
+        sleep(5)
+
+
+if __name__ == '__main__':
+    main()
