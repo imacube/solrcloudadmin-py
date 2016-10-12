@@ -1,3 +1,7 @@
+# 0.16.4 (2016-10-)
+
+Added script to monitor cluster recovery. Ignores replicas in a 'construction' state
+
 # 0.16.3 (2016-10-03)
 
 Fixed bug with solrcloud-move-collection
