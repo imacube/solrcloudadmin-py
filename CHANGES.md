@@ -1,4 +1,8 @@
-# 0.16.4 (2016-10-)
+# 0.16.5 (2016-10-12)
+
+Fixed typo in solrcloud-cluster-recovery
+
+# 0.16.4 (2016-10-11)
 
 Added script to monitor cluster recovery. Ignores replicas in a 'construction' state
 
