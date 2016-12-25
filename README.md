@@ -18,12 +18,16 @@ These scripts carry out basic SolrCloud administrative tasks on the cluster. Eac
   - Add a replica to a collection's shard
 - solrcloud-cluster-details
   - SolrCloud node collection counts and unhealthy cores
+- solrcloud-cluster-recovery
+  - Monitor count of collections that are not in an active or construction state
 - solrcloud-collection-count
   - SolrCloud node collection counts
 - solrcloud-delete-down
   - Delete replicas that are down, won't delete if all replicas are down
 - solrcloud-delete-replica
   - Delete a specific replica
+- solrcloud-document-count
+  - Get count of documents in a collection
 - solrcloud-list-live-nodes
   - List live SolrCloud nodes
 - solrcoud-migrate-collections
