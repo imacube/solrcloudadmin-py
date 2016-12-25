@@ -1,6 +1,7 @@
 # 0.16.8 (2016-12-25)
 
-Added forgotten updates to CHAGNES.md :(
+* Added forgotten updates to CHAGNES.md :(
+* Removed .py extension from scripts/solrcloud-document-count in setup.py
 
 # 0.16.7 (2016-12-25)
 

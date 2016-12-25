@@ -23,7 +23,7 @@ setup(
              'scripts/solrcloud-collection-count',
              'scripts/solrcloud-delete-down',
              'scripts/solrcloud-delete-replica',
-             'scripts/solrcloud-document-count.py',
+             'scripts/solrcloud-document-count',
              'scripts/solrcloud-list-live-nodes',
              'scripts/solrcloud-migrate-collections',
              'scripts/solrcloud-move-collection',
