@@ -1,3 +1,7 @@
+# 0.16.6 (2016-12-25)
+
+Added other scripts to setup.py
+
 # 0.16.5 (2016-10-12)
 
 Fixed typo in solrcloud-cluster-recovery
